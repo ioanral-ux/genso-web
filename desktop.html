@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Genso Game</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+html,body{margin:0;height:100%;background:radial-gradient(circle at 50% 30%,#1b5a8f,#0B3D66 60%,#06233d);overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+iframe{border:0;height:100vh;width:min(560px,56vh);max-width:100vw;background:#0B3D66;box-shadow:0 0 60px rgba(0,0,0,.5)}
+</style></head><body>
+<script>
+var p=new URLSearchParams(location.search).get('p')||'index.html';
+if(!/^[\w-]+\.html$/.test(p))p='index.html';
+var f=document.createElement('iframe');f.src=p;f.setAttribute('allow','autoplay; fullscreen');document.body.appendChild(f);
+document.title='Genso Game';
+</script></body></html>
