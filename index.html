@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Genso">
+<meta name="theme-color" content="#0B3D66">
+<meta name="description" content="Genso Game: a chemistry merge-puzzle. Combine atoms into real molecules.">
+<meta property="og:title" content="Genso Game 元素">
+<meta property="og:description" content="A chemistry merge-puzzle. Combine atoms into real molecules, in your browser or on your phone.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gensogame.com/">
+<meta property="og:image" content="https://gensogame.com/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<title>GENSO GAME — Choose Your Lab</title>
+<link href="assets/fonts/fonts.css" rel="stylesheet">
+<style>
+  :root{
+    --bp-bg: #0B3D66;
+    --bp-bg-2: #082C4A;
+    --bp-line: #4A85B8;
+    --bp-accent: #FFC145;
+    --bp-text: #D8ECFF;
+    --bp-text-dim: #9FC3E8;
+
+    --kw-bg-top: #F1FAE8;
+    --kw-bg-bot: #C9EBCB;
+    --kw-ink: #5B4A42;
+    --kw-ink-dim: #8C7C72;
+    --kw-accent: #FF9E7A;
+
+    --safe-top: 16px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{
+    margin:0; height:100%; overflow:hidden;
+    font-family:'Quicksand', sans-serif;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #stage{
+    position:relative; width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* --- unified neutral background (both halves share the same
+     look now, so wherever the mobile split-point lands relative
+     to the cards, it's invisible — no more mismatched colors) --- */
+  .half{ position:absolute; top:0; bottom:0; width:50%; overflow:hidden; }
+  .half.lab, .half.kawaii{
+    background: linear-gradient(160deg, #35495C, #1F2C38);
+    background-image:
+      linear-gradient(160deg, #35495C, #1F2C38),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 42px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 42px);
+  }
+  .half.lab{ left:0; }
+  .half.kawaii{ right:0; }
+  .half.kawaii .bubble{
+    position:absolute; border-radius:50%;
+    background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.55) 35%, rgba(72,178,128,0.55) 75%, rgba(47,150,102,0.6) 100%);
+    border: 1.5px solid rgba(47,150,102,0.4);
+    box-shadow: 0 3px 8px rgba(47,150,102,0.2);
+    opacity:0.9; animation: bob 7s ease-in-out infinite;
+  }
+  @keyframes bob{ 0%,100%{ transform:translateY(0px); } 50%{ transform:translateY(-16px); } }
+
+  /* --- foreground content --- */
+  .content{
+    position:relative; z-index:2;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:24px 16px;
+    max-width:96vw;
+  }
+  .logo{
+    width:min(190px, 30vw); height:auto;
+    /* logo art already has its own rounded corners + shadow baked in */
+  }
+  .tagline{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px; font-weight:500; letter-spacing:0.5px;
+    color:#3A3A3A;
+    background: rgba(255,255,255,0.55);
+    padding:6px 16px;
+    border-radius:999px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    margin:2px 0 22px 0;
+  }
+  .mode-row{
+    display:flex; gap:22px; flex-wrap:wrap; justify-content:center;
+    max-width:760px;
+  }
+  .mode-card{
+    display:flex; flex-direction:column; align-items:center; text-align:center;
+    width:270px; padding:22px 20px 20px;
+    border-radius:22px;
+    text-decoration:none;
+    cursor:pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .mode-card:hover{ transform: translateY(-6px); }
+  .mode-icon{ font-size:34px; line-height:1; margin-bottom:10px; }
+  .mode-title{ font-size:17px; font-weight:700; letter-spacing:0.5px; margin-bottom:2px; }
+  .mode-sub{ font-size:11px; opacity:0.8; margin-bottom:4px; }
+  .mode-desc{
+    font-size:12px; line-height:1.5; font-weight:600;
+    max-height:0; opacity:0; overflow:hidden;
+    transition: max-height 0.28s ease, opacity 0.22s ease, margin-top 0.28s ease;
+  }
+  .mode-card:hover .mode-desc{ max-height:120px; opacity:1; margin-top:10px; }
+
+  .mode-card.lab{
+    background: rgba(8,20,34,0.55);
+    border: 1.5px solid var(--bp-line);
+    color: var(--bp-text);
+    font-family:'JetBrains Mono', monospace;
+  }
+  .mode-card.lab:hover{ box-shadow: 0 14px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--bp-accent); border-color: var(--bp-accent); }
+  .mode-card.lab .mode-title{ color: var(--bp-accent); }
+  .mode-card.lab .mode-sub{ color: var(--bp-text-dim); }
+  .mode-card.lab .mode-desc{ color: var(--bp-text-dim); }
+
+  .mode-card.kawaii{
+    background: rgba(255,255,255,0.85);
+    border: 1.5px solid #fff;
+    color: var(--kw-ink);
+    font-family:'Quicksand', sans-serif;
+    box-shadow: 0 8px 20px rgba(120,140,110,0.18);
+  }
+  .mode-card.kawaii:hover{ box-shadow: 0 14px 30px rgba(120,140,110,0.28); }
+  .mode-card.kawaii .mode-title{ font-family:'Baloo 2', sans-serif; color:#3FA35B; }
+  .mode-card.kawaii .mode-sub{ color: var(--kw-ink-dim); }
+  .mode-card.kawaii .mode-desc{ color: var(--kw-ink); }
+
+  .footnote{
+    margin-top:22px; font-size:10.5px; color:#DCEBFF;
+    background: rgba(20,60,100,0.55);
+    padding:6px 14px;
+    border-radius:999px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+
+  #settingsBtn{
+    position:fixed;
+    top:calc(14px + var(--safe-top)); right:14px;
+    z-index:5;
+    font-size:18px;
+    width:38px; height:38px;
+    display:flex; align-items:center; justify-content:center;
+    background: rgba(255,255,255,0.55);
+    border:1px solid rgba(255,255,255,0.7);
+    color:#1B3A54;
+    border-radius:999px;
+    cursor:pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    transition: transform 0.1s ease-out;
+  }
+  #settingsBtn:hover{ border-color: #fff; }
+  #settingsBtn:active{ transform: scale(0.92); }
+
+  #highscoresBtn{
+    position:fixed;
+    top:calc(14px + var(--safe-top)); left:14px;
+    z-index:5;
+    width:38px; height:38px;
+    display:flex; align-items:center; justify-content:center;
+    background: rgba(255,255,255,0.55);
+    border:1px solid rgba(255,255,255,0.7);
+    border-radius:999px;
+    cursor:pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    padding:0;
+    transition: transform 0.1s ease-out;
+  }
+  #highscoresBtn:hover{ border-color: #fff; }
+  #highscoresBtn:active{ transform: scale(0.92); }
+  #highscoresBtn img{ width:30px; height:30px; object-fit:contain; }
+
+  .settings-overlay{
+    position:fixed; inset:0; z-index:20;
+    background: rgba(8,20,34,0.72);
+    display:none; align-items:center; justify-content:center;
+    pointer-events:none;
+    opacity:0;
+    transition: opacity 0.25s ease-out;
+  }
+  .settings-overlay.show{ display:flex; pointer-events:auto; }
+  .settings-overlay.show.open{ opacity:1; }
+  .settings-card{
+    width:88%; max-width:360px;
+    background: #16324A;
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:18px;
+    padding:18px 20px 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    font-family:'Space Grotesk', sans-serif;
+    color:#DCEBFF;
+    transform: scale(0.3);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .settings-overlay.open .settings-card{ transform: scale(1); }
+  .settings-card h2{
+    font-size:15px; letter-spacing:0.5px; margin:0 0 14px 0;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  #closeSettingsBtn, #closeHighscoresBtn{
+    font-size:16px; background:transparent; border:none; color:#9FC3E8; cursor:pointer; line-height:1;
+    transition: transform 0.1s ease-out, color 0.15s ease-out;
+  }
+  #closeSettingsBtn:hover, #closeHighscoresBtn:hover{ color:#fff; }
+  #closeSettingsBtn:active, #closeHighscoresBtn:active{ transform: scale(0.85); }
+  .settings-row{ margin-bottom:16px; }
+  .settings-row:last-child{ margin-bottom:0; }
+  .settings-label{ font-size:11px; letter-spacing:1px; color:#9FC3E8; margin-bottom:8px; }
+  .settings-choice{ display:flex; gap:8px; }
+  .settings-choice button{
+    flex:1;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px; font-weight:600;
+    background: rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.2);
+    color:#DCEBFF;
+    padding:9px 6px;
+    border-radius:10px;
+    cursor:pointer;
+  }
+  .settings-choice button.active{
+    background: rgba(255,193,69,0.18);
+    border-color:#FFC145;
+    color:#FFC145;
+  }
+  .settings-note{ font-size:11px; color:#9FC3E8; margin-top:8px; min-height:14px; line-height:1.4; }
+
+  /* ---- High Scores panel ---- */
+  .highscores-card{
+    position:relative;
+    width:92%; max-width:400px; max-height:85vh; overflow-y:auto;
+    background: #16324A;
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:18px;
+    padding:18px 20px 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    font-family:'Space Grotesk', sans-serif;
+    color:#DCEBFF;
+    transform: scale(0.3);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .settings-overlay.open .highscores-card{ transform: scale(1); }
+  #closeHighscoresBtn{
+    position:absolute; top:14px; right:16px;
+  }
+  .highscores-header{
+    display:flex; flex-direction:column; align-items:center;
+    margin-bottom:14px;
+  }
+  .highscores-header img{ width:52px; height:52px; object-fit:contain; margin-bottom:6px; }
+  .highscores-header h2{ font-size:16px; letter-spacing:1px; margin:0; }
+  .hs-mode-block{ margin-bottom:18px; }
+  .hs-mode-block:last-child{ margin-bottom:0; }
+  .hs-mode-title{
+    font-size:12px; font-weight:700; letter-spacing:1px; color:#FFC145;
+    border-bottom:1px solid rgba(255,255,255,0.15); padding-bottom:6px; margin-bottom:10px;
+  }
+  .hs-columns{ display:flex; gap:14px; }
+  .hs-col{ flex:1; min-width:0; }
+  .hs-col-label{ font-size:10px; letter-spacing:0.5px; color:#9FC3E8; margin-bottom:6px; }
+  .hs-entry{
+    display:flex; align-items:center; gap:6px;
+    font-size:12px; padding:3px 0; color:#DCEBFF;
+    opacity:0;
+    animation: hsRowIn 0.3s ease-out forwards;
+  }
+  @keyframes hsRowIn{
+    from{ opacity:0; transform: translateY(6px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+  .hs-entry .hs-rank{ color:#9FC3E8; width:14px; flex:0 0 auto; }
+  .hs-entry img{ width:14px; height:14px; object-fit:contain; flex:0 0 auto; }
+  .hs-empty{ font-size:11px; color:#6C89A8; font-style:italic; }
+
+  @media (max-width:640px){
+    .half{ width:100%; }
+    .half.kawaii{ clip-path: polygon(0 50%, 100% 50%, 100% 100%, 0% 100%); }
+    .half.lab{ clip-path: polygon(0 0, 100% 0, 100% 52%, 0 52%); }
+    :root{ --safe-top: max(24px, env(safe-area-inset-top, 24px)); }
+    #stage{ overflow-y:auto; align-items:flex-start; padding-top:calc(33px + var(--safe-top)); }
+
+    /* --- splash bg test: photo replaces the flat gradient halves --- */
+    #stage{
+      background-image: url('assets/images/splash-hero.jpg');
+      background-size: cover;
+      background-position: center -32px; /* panned up 32px (~5mm) to track the content shift below */
+    }
+    .half.lab, .half.kawaii{
+      background-image: none;
+      background: rgba(11,61,102,0.28); /* thin scrim for text contrast, tinted per half */
+    }
+    .half.kawaii{ background: rgba(20,60,40,0.12); }
+  }
+</style>
+</head>
+<body>
+<button id="highscoresBtn" aria-label="High Scores"><img src="assets/images/highscores_trophy.png" alt=""></button>
+<div class="settings-overlay" id="highscoresOverlay">
+  <div class="highscores-card">
+    <button id="closeHighscoresBtn">✕</button>
+    <div class="highscores-header">
+      <img src="assets/images/highscores_trophy.png" alt="">
+      <h2>HIGH SCORES</h2>
+    </div>
+    <div id="highscoresContent"></div>
+  </div>
+</div>
+<button id="settingsBtn" aria-label="Settings">⚙</button>
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-card">
+    <h2>SETTINGS <button id="closeSettingsBtn">✕</button></h2>
+    <div class="settings-row">
+      <div class="settings-label">MUSIC</div>
+      <div class="settings-choice">
+        <button id="settingsMusicOn">♪ On</button>
+        <button id="settingsMusicOff">Muted</button>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">CONTROLS (applies to both labs)</div>
+      <div class="settings-choice">
+        <button id="settingsControlTap">Tap to Drop</button>
+        <button id="settingsControlDrag">Drag and Drop</button>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">TUTORIAL (applies to both labs)</div>
+      <div class="settings-choice">
+        <button id="settingsReplayTutorial">&#8635; Replay tutorial</button>
+      </div>
+      <div class="settings-note" id="settingsReplayNote"></div>
+    </div>
+  </div>
+</div>
+<audio id="bgm" src="assets/audio/genso_splash.mp3" loop preload="auto"></audio>
+<div id="stage">
+  <div class="half lab"></div>
+  <div class="half kawaii" id="kawaiiHalf"></div>
+
+  <div class="content">
+    <img class="logo" src="assets/images/logo-v3.png" alt="Genso Game logo">
+    <div class="tagline">pick a lab to play in</div>
+
+    <div class="mode-row">
+      <a class="mode-card lab" href="genso-game.html">
+        <div class="mode-icon">🧬</div>
+        <div class="mode-title">LAB MODE</div>
+        <div class="mode-sub">real chemistry, real reactions</div>
+        <div class="mode-desc">
+          Scientifically accurate: real valence bonding, multi-atom clusters
+          that lock once fully saturated, and true chemical reactions.
+        </div>
+      </a>
+
+      <a class="mode-card kawaii" href="genso-game-kawaii.html">
+        <div class="mode-icon">🫧</div>
+        <div class="mode-title">Kawaii Mode</div>
+        <div class="mode-sub">cute blobs, chill merging</div>
+        <div class="mode-desc">
+          Suika-style instant merges — glossy blobs, cute faces. Simpler,
+          snappier, zero-frustration matching.
+        </div>
+      </a>
+    </div>
+
+    <div class="footnote">hover a card for details, or just tap to jump in</div>
+  </div>
+</div>
+
+<script>
+// a few floating decorative bubbles on the kawaii half
+const kawaiiHalf = document.getElementById('kawaiiHalf');
+const bubbleSpecs = [
+  { top:'12%', left:'20%', size:26, delay:'0s' },
+  { top:'70%', left:'12%', size:18, delay:'1.2s' },
+  { top:'25%', left:'78%', size:22, delay:'2.1s' },
+  { top:'82%', left:'70%', size:14, delay:'0.6s' },
+  { top:'50%', left:'55%', size:12, delay:'2.8s' },
+];
+bubbleSpecs.forEach(b => {
+  const el = document.createElement('div');
+  el.className = 'bubble';
+  el.style.top = b.top; el.style.left = b.left;
+  el.style.width = b.size + 'px'; el.style.height = b.size + 'px';
+  el.style.animationDelay = b.delay;
+  kawaiiHalf.appendChild(el);
+});
+
+/* =========================================================
+   MUSIC — the packaged Android app disables the WebView's
+   autoplay-with-sound gesture requirement (see MainActivity),
+   so we try to start on load first. If that's blocked (e.g.
+   previewing this file in a regular browser, or an OEM WebView
+   that still enforces it), it falls back to starting on the
+   first tap, same pattern as the in-game bgm. Mute state is
+   shared (via localStorage) across splash, Lab, and Kawaii, so
+   toggling it anywhere keeps everything in sync.
+   ========================================================= */
+const MUSIC_MUTED_KEY = 'genso_music_muted';
+const CONTROL_MODE_KEY = 'genso_control_mode'; // 'tap' | 'drag'
+const bgm = document.getElementById('bgm');
+let musicStarted = false;
+let musicMuted = localStorage.getItem(MUSIC_MUTED_KEY) === 'true';
+bgm.muted = musicMuted;
+
+function startMusicIfNeeded() {
+  if (musicStarted) return;
+  musicStarted = true;
+  bgm.volume = 0.55;
+  bgm.play().catch(() => { musicStarted = false; }); // retry on next gesture if blocked
+}
+if (!musicMuted) startMusicIfNeeded(); // attempt immediately on load
+document.getElementById('stage').addEventListener('pointerdown', () => {
+  if (!musicMuted) startMusicIfNeeded(); // fallback if the load-time attempt was blocked
+});
+
+/* =========================================================
+   SETTINGS PANEL — music on/off and control-method choice.
+   Control mode has no effect on splash itself; it's just
+   written to shared storage for Lab/Kawaii to read on load.
+   ========================================================= */
+/* Shared open/close helper for the settings + high-scores overlays.
+   'show' toggles display:none -> flex; 'open' (added a frame later,
+   after a forced reflow) drives the scale/fade transition. Splitting
+   these into two class changes is what makes the transition actually
+   fire instead of the display-change and the animated-state change
+   landing in the same paint and skipping straight to the end state. */
+function openOverlay(el){
+  el.classList.add('show');
+  void el.offsetWidth; // force reflow
+  requestAnimationFrame(() => el.classList.add('open'));
+}
+function closeOverlay(el){
+  el.classList.remove('open');
+  setTimeout(() => el.classList.remove('show'), 250); // match the opacity transition duration
+}
+
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsOverlay = document.getElementById('settingsOverlay');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const musicOnBtn = document.getElementById('settingsMusicOn');
+const musicOffBtn = document.getElementById('settingsMusicOff');
+const controlTapBtn = document.getElementById('settingsControlTap');
+const controlDragBtn = document.getElementById('settingsControlDrag');
+const replayTutorialBtn = document.getElementById('settingsReplayTutorial');
+const replayNote = document.getElementById('settingsReplayNote');
+
+function refreshSettingsUI(){
+  replayNote.textContent = '';
+  replayTutorialBtn.classList.remove('active');
+  musicOnBtn.classList.toggle('active', !musicMuted);
+  musicOffBtn.classList.toggle('active', musicMuted);
+  const controlMode = localStorage.getItem(CONTROL_MODE_KEY) || 'tap';
+  controlTapBtn.classList.toggle('active', controlMode === 'tap');
+  controlDragBtn.classList.toggle('active', controlMode === 'drag');
+}
+refreshSettingsUI();
+
+settingsBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  refreshSettingsUI();
+  openOverlay(settingsOverlay);
+});
+closeSettingsBtn.addEventListener('click', () => closeOverlay(settingsOverlay));
+settingsOverlay.addEventListener('click', (e) => { if (e.target === settingsOverlay) closeOverlay(settingsOverlay); });
+
+musicOnBtn.addEventListener('click', () => {
+  musicMuted = false;
+  bgm.muted = false;
+  startMusicIfNeeded();
+  localStorage.setItem(MUSIC_MUTED_KEY, 'false');
+  refreshSettingsUI();
+});
+musicOffBtn.addEventListener('click', () => {
+  musicMuted = true;
+  bgm.muted = true;
+  localStorage.setItem(MUSIC_MUTED_KEY, 'true');
+  refreshSettingsUI();
+});
+controlTapBtn.addEventListener('click', () => {
+  localStorage.setItem(CONTROL_MODE_KEY, 'tap');
+  refreshSettingsUI();
+});
+controlDragBtn.addEventListener('click', () => {
+  localStorage.setItem(CONTROL_MODE_KEY, 'drag');
+  refreshSettingsUI();
+});
+
+/* Replay tutorial — flags both modes so each one shows its first-time tour
+   again the next time it's opened. The tour itself lives in each game file;
+   'replay' (rather than removing the key) is what makes it show even for
+   a returning player who already has scores saved. */
+const TUTORIAL_KEYS = ['genso_tutorial_seen_lab', 'genso_tutorial_seen_kawaii'];
+replayTutorialBtn.addEventListener('click', () => {
+  TUTORIAL_KEYS.forEach(k => localStorage.setItem(k, 'replay'));
+  replayTutorialBtn.classList.add('active');
+  replayNote.textContent = 'Done! The tour will show next time you open each lab.';
+});
+
+/* =========================================================
+   HIGH SCORES PANEL — reads the daily/all-time top-5 lists
+   that Lab and Kawaii write to localStorage when a run ends.
+   Read-only here; recording happens in each game file.
+   ========================================================= */
+const HS_LAUREL_ICON = 'assets/images/highscores_laurel.png';
+
+function hsTodayKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function hsLoadAlltime(key){
+  try { return JSON.parse(localStorage.getItem(key)) || []; }
+  catch { return []; }
+}
+function hsLoadDaily(key){
+  try {
+    const rec = JSON.parse(localStorage.getItem(key));
+    if (rec && rec.date === hsTodayKey()) return rec.entries || [];
+    return [];
+  } catch { return []; }
+}
+function hsRenderList(entries, isAlltime){
+  if (!entries.length) return '<div class="hs-empty">No scores yet</div>';
+  const STAGGER_BASE_MS = 150;   // lets the card's own pop-in read first
+  const STAGGER_STEP_MS = 30;    // gap between each row within a column
+  return entries.map((e,i) => `
+    <div class="hs-entry" style="animation-delay:${STAGGER_BASE_MS + i*STAGGER_STEP_MS}ms">
+      <span class="hs-rank">${i+1}.</span>
+      <span>${e.score}</span>
+      ${isAlltime && i===0 ? `<img src="${HS_LAUREL_ICON}" alt="">` : ''}
+    </div>`).join('');
+}
+function renderHighscores(){
+  const modes = [
+    { label:'LAB', alltimeKey:'genso_scores_alltime_lab', dailyKey:'genso_scores_daily_lab' },
+    { label:'KAWAII', alltimeKey:'genso_scores_alltime_kawaii', dailyKey:'genso_scores_daily_kawaii' },
+  ];
+  document.getElementById('highscoresContent').innerHTML = modes.map(m => `
+    <div class="hs-mode-block">
+      <div class="hs-mode-title">${m.label}</div>
+      <div class="hs-columns">
+        <div class="hs-col">
+          <div class="hs-col-label">TODAY</div>
+          ${hsRenderList(hsLoadDaily(m.dailyKey), false)}
+        </div>
+        <div class="hs-col">
+          <div class="hs-col-label">ALL-TIME</div>
+          ${hsRenderList(hsLoadAlltime(m.alltimeKey), true)}
+        </div>
+      </div>
+    </div>`).join('');
+}
+const highscoresBtn = document.getElementById('highscoresBtn');
+const highscoresOverlay = document.getElementById('highscoresOverlay');
+const closeHighscoresBtn = document.getElementById('closeHighscoresBtn');
+highscoresBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  renderHighscores();
+  openOverlay(highscoresOverlay);
+});
+closeHighscoresBtn.addEventListener('click', () => closeOverlay(highscoresOverlay));
+highscoresOverlay.addEventListener('click', (e) => { if (e.target === highscoresOverlay) closeOverlay(highscoresOverlay); });
+
+</script>
+<script src="assets/js/app-lifecycle.js"></script>
+<script src="assets/js/web-shell.js"></script>
+</body>
+</html>

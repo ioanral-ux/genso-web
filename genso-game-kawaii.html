@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Genso">
+<meta name="theme-color" content="#0B3D66">
+
+<title>GENSO GAME — Kawaii Edition</title>
+<link href="assets/fonts/fonts.css" rel="stylesheet">
+<style>
+  :root{
+    --kw-bg-top: #F1FAE8;
+    --kw-bg-bot: #C9EBCB;
+    --kw-jar-glass: rgba(255,255,255,0.35);
+    --kw-jar-edge: #FFFFFF;
+    --kw-ink: #5B4A42;
+    --kw-ink-dim: #9C8C82;
+    --kw-panel: rgba(255,255,255,0.82);
+    --kw-accent: #FF9E7A;
+    --kw-accent-2: #7AC8FF;
+    --kw-shadow: 0 6px 18px rgba(180,140,110,0.18);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: linear-gradient(180deg, var(--kw-bg-top), var(--kw-bg-bot));
+    background-image: url('assets/images/kawaii_background.png'), linear-gradient(180deg, var(--kw-bg-top), var(--kw-bg-bot));
+    background-size: cover, cover;
+    background-position: center bottom, center;
+    background-repeat: no-repeat, no-repeat;
+    color: var(--kw-ink);
+    font-family:'Quicksand', sans-serif;
+    overflow:hidden;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #stage{
+    position:relative;
+    width:100%; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px;
+    overflow:auto;
+    padding:14px 0;
+  }
+  .main-row{
+    position:relative;
+    display:flex; flex-wrap:wrap;
+    align-items:flex-start; justify-content:center;
+    gap:16px;
+    max-width:98vw;
+  }
+  .playfield-col{
+    display:flex; flex-direction:column; align-items:center;
+    gap:12px;
+  }
+  .playfield{
+    position:relative;
+    width: min(430px, 86vw);
+    aspect-ratio: 620/820;
+  }
+  canvas#game{
+    position:relative; z-index:2;
+    touch-action:none;
+    cursor: pointer;
+    width:100%; height:100%;
+    display:block;
+    border-radius:18px;
+  }
+  .hud{ position:absolute; z-index:3; pointer-events:none; }
+  .title-block{ top:10px; left:14px; pointer-events:auto; }
+  .title-block img{
+    display:block;
+    width:180px; height:auto;
+  }
+  .score-block{ top:10px; right:14px; text-align:right; }
+  .score-block .label{
+    font-family:'Fredoka', sans-serif;
+    font-size:13px; font-weight:600; letter-spacing:1px; color:#4F7942;
+  }
+  .score-block .value{
+    font-family:'Fredoka', sans-serif;
+    font-size:34px; font-weight:700; color:#4F7942;
+    text-shadow: 0 2px 0 rgba(180,120,90,0.25);
+    line-height:1;
+  }
+  .score-block .best{
+    font-family:'Fredoka', sans-serif;
+    font-size:13px; font-weight:600; color:#4F7942;
+    margin-top:1px;
+  }
+  .next-block{
+    top:86px; right:14px; text-align:right;
+    display:flex; align-items:center; gap:6px; justify-content:flex-end;
+  }
+  .next-block .label{
+    font-family:'Fredoka', sans-serif;
+    font-size:12px; font-weight:600; color:#4F7942;
+  }
+  .next-piece-badge{
+    width:34px; height:34px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Baloo 2', sans-serif; font-weight:700; font-size:14px;
+    border:2px solid #fff; background: rgba(255,255,255,0.5);
+    box-shadow: var(--kw-shadow);
+  }
+  .controls-row{
+    display:flex; gap:8px; justify-content:center;
+    width: min(430px, 86vw);
+  }
+  .kw-btn{
+    font-family:'Quicksand', sans-serif; font-weight:700; font-size:11px;
+    background: rgba(255,255,255,0.85); border:none; border-radius:20px;
+    color: var(--kw-ink); padding:7px 14px; cursor:pointer;
+    box-shadow: var(--kw-shadow);
+    transition: transform 0.1s ease;
+  }
+  .kw-btn:hover{ transform: translateY(-1px); }
+  .kw-btn:active{ transform: translateY(0px) scale(0.97); }
+  .legend{
+    display:flex; gap:6px; flex-wrap:wrap; justify-content:center;
+    background: var(--kw-panel);
+    border-radius:16px;
+    padding:8px 10px;
+    box-shadow: var(--kw-shadow);
+    max-width:min(430px, 86vw);
+  }
+  .legend-item{
+    width:38px; height:38px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Baloo 2', sans-serif; font-weight:700; font-size:13px;
+    border:2px solid #fff;
+    position:relative;
+    opacity:0.55;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .legend-item.active{ opacity:1; transform: scale(1.12); }
+  .sidebar{
+    width:200px;
+    max-height: min(430px, 86vw) * 820/620;
+    background: var(--kw-panel);
+    border-radius:18px;
+    padding:12px 14px;
+    overflow-y:auto;
+    box-shadow: var(--kw-shadow);
+  }
+  .sidebar .sidebar-title{
+    font-family:'Baloo 2', sans-serif;
+    font-size:13px; font-weight:700; color: var(--kw-ink);
+    border-bottom:2px dashed rgba(150,120,100,0.25); padding-bottom:6px; margin-bottom:8px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .sidebar .sidebar-group{
+    font-size:10px; font-weight:700; letter-spacing:0.5px; color: var(--kw-accent);
+    margin:10px 0 4px 0;
+  }
+  .sidebar .sidebar-group:first-of-type{ margin-top:0; }
+  .interaction-row{
+    font-size:11px; font-weight:600; padding:4px 0; color: var(--kw-ink-dim);
+    display:flex; justify-content:space-between; gap:6px;
+    line-height:1.3;
+  }
+  .interaction-row .formula{ white-space:nowrap; }
+  .interaction-row .pts{ color: var(--kw-accent); flex:0 0 auto; font-weight:700; }
+  .interaction-row.seen{ color: var(--kw-ink); }
+  .interaction-row.seen .formula{ font-weight:700; }
+  .overflow-screen{
+    position:absolute; inset:0; z-index:10; border-radius:18px;
+    background: rgba(241,250,232,0.94);
+    display:none; align-items:center; justify-content:center;
+    flex-direction:column; gap:12px; text-align:center;
+  }
+  .overflow-screen.show{ display:flex; }
+  .overflow-screen h2{
+    font-family:'Baloo 2', sans-serif;
+    color: var(--kw-accent); font-size:26px; margin:0;
+  }
+  .overflow-screen p{ color: var(--kw-ink-dim); font-size:13px; margin:0; font-weight:600; }
+  #overflowRankMsg{ color: var(--kw-accent); font-size:13px; font-weight:700; min-height:16px; }
+  .rules-panel{
+    position:absolute; inset:0; z-index:11; border-radius:18px;
+    background: rgba(91,74,66,0.5);
+    display:none; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  .rules-panel.show{ display:flex; pointer-events:auto; }
+  .rules-card{
+    width:88%; max-height:82%; overflow-y:auto;
+    background:#fff; border-radius:18px;
+    padding:18px 20px;
+    box-shadow: var(--kw-shadow);
+  }
+  .rules-card h2{
+    font-family:'Baloo 2', sans-serif;
+    color: var(--kw-ink); font-size:18px; margin:0 0 10px 0;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .rules-card h3{
+    font-family:'Baloo 2', sans-serif;
+    font-size:12px; color: var(--kw-accent);
+    margin:16px 0 6px 0; border-bottom:2px dashed rgba(150,120,100,0.2); padding-bottom:4px;
+  }
+  .rules-card p, .rules-card li{ font-size:12px; line-height:1.55; color: var(--kw-ink); font-weight:600; }
+  .rules-card ul{ margin:4px 0; padding-left:18px; }
+  .rules-table{ width:100%; border-collapse:collapse; font-size:11px; margin-top:4px; }
+  .rules-table td, .rules-table th{ padding:4px 6px; border-bottom:1px solid rgba(150,120,100,0.15); text-align:left; }
+  .rules-table th{ color: var(--kw-ink-dim); font-weight:700; }
+  #closeRulesBtn{
+    font-family:'Quicksand', sans-serif; font-size:16px; font-weight:700;
+    background:transparent; border:none; color: var(--kw-ink-dim); cursor:pointer;
+  }
+  #closeRulesBtn:hover{ color: var(--kw-accent); }
+
+  /* =========================================================
+     MOBILE LAYOUT — .main-row (title + jar + controls + legend)
+     is taller than most phone viewports. #stage centers overflowing
+     content by default, which clips evenly off BOTH the top and
+     bottom (Chromium's overflow+justify-content:center behavior) —
+     that's why the jar looked cut off at the top and not centered.
+     Top-aligning keeps the start of the content always in view,
+     with the rest reachable by scrolling, same as Lab Mode.
+     ========================================================= */
+  @media (max-width: 640px){
+    :root{ --safe-top: max(24px, env(safe-area-inset-top, 24px)); }
+    #stage{ justify-content:center; padding-top:calc(84px + var(--safe-top)); padding-bottom:8px; }
+    .playfield{ width: min(480px, 98vw); }
+    .controls-row{ width: min(480px, 98vw); }
+
+    /* Detach title/score/next from the canvas and pin them to the viewport
+       instead — they used to sit inside the top of the playfield, which
+       worked when the jar had a big empty gap above it, but now that the
+       jar's opening starts much higher up, an in-canvas overlay collides
+       with it. Fixed positioning keeps them cleanly above the jar. */
+    .hud{ position:fixed; }
+    .title-block{ top:var(--safe-top); left:14px; }
+    .score-block{ top:var(--safe-top); right:14px; }
+    .next-block{ top:calc(82px + var(--safe-top)); right:14px; }
+
+    /* Combos sidebar becomes a slide-in drawer, hidden off-screen by default,
+       instead of an always-visible panel below the fold. */
+    .sidebar{
+      position:fixed; top:50%; right:0; height:auto; max-height:70vh; width:78vw; max-width:300px;
+      transform:translateY(-50%) translateX(100%);
+      transition: transform 0.28s ease;
+      border-radius:18px 0 0 18px; z-index:60;
+    }
+    .sidebar.open{ transform:translateY(-50%) translateX(0); }
+    .sidebar-backdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,0.35);
+      z-index:55; opacity:0; pointer-events:none; transition: opacity 0.28s ease;
+    }
+    .sidebar-backdrop.open{ opacity:1; pointer-events:auto; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="main-row">
+    <div class="playfield-col">
+      <div class="playfield">
+        <canvas id="game" width="620" height="820"></canvas>
+
+        <div class="hud title-block">
+          <img src="assets/images/kawaii_banner_2.png" alt="Genso Game — Kawaii Edition">
+        </div>
+        <div class="hud score-block">
+          <div class="label">SCORE</div>
+          <div class="value" id="scoreVal">0</div>
+          <div class="best">Best: <span id="bestVal">0</span></div>
+        </div>
+        <div class="hud next-block">
+          <span class="label">NEXT</span>
+          <span class="next-piece-badge" id="nextBadge">?</span>
+        </div>
+        <div class="overflow-screen" id="overflowScreen">
+          <h2>Jar's full!</h2>
+          <p id="overflowScore"></p>
+          <p id="overflowRankMsg"></p>
+          <button class="kw-btn" id="overflowResetBtn">Try again</button>
+        </div>
+
+        <div class="rules-panel" id="rulesPanel">
+          <div class="rules-card">
+            <h2>How it works <button id="closeRulesBtn">✕</button></h2>
+            <div id="rulesContent"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <button class="kw-btn" id="backBtn" onclick="location.href='index.html'">← Back</button>
+        <button class="kw-btn" id="resetBtn">↺ Reset</button>
+        <button class="kw-btn" id="rulesBtn">? Rules</button>
+        <button class="kw-btn" id="muteBtn">🔊 Music</button>
+        <button class="kw-btn" id="combosBtn">Combos</button>
+      </div>
+
+      <audio id="bgm" src="assets/audio/genso_theme.mp3" loop preload="auto"></audio>
+
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-title">Combos <button id="closeSidebarBtn" style="background:transparent;border:none;color:var(--kw-ink);font-size:16px;cursor:pointer;line-height:1;">✕</button></div>
+      <div id="sidebarContent"></div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/matter.min.js"></script>
+<script>
+/* =========================================================
+   CHEMISTRY DATA LAYER
+   This block is the only thing that would need to change to
+   add new content — everything below (physics, sidebar, rules
+   panel, scoring) is generated from these tables. Kept in the
+   same shape/spirit as genso-game.html's data layer so the two
+   files could eventually share this section behind a chooser.
+
+   Unlike the scientifically-accurate version, there is no
+   valence/bond/cluster system here. Every SPECIES is a single
+   self-contained blob. Two blobs that touch either match a
+   RECIPE (and instantly become the product(s)) or just bounce —
+   order of contact never matters, only the pair itself.
+   ========================================================= */
+// Molecules/reactions can be fully implemented but held back from players
+// until a planned reveal — flip the relevant flag to true to switch it on,
+// nothing else needs to change.
+const FEATURE_FLAGS = {
+  formaldehyde: false,
+};
+
+const SPECIES = {
+  H:  { kind:'element', name:'Hydrogen', mass:1,  fill:'#F3FAFF', stroke:'#A9D4F0' },
+  O:  { kind:'element', name:'Oxygen',   mass:16, fill:'#FFC2AC', stroke:'#E8703F' },
+  C:  { kind:'element', name:'Carbon',   mass:12, fill:'#F0DDA8', stroke:'#C9A662' },
+  N:  { kind:'element', name:'Nitrogen', mass:14, fill:'#C3D9FF', stroke:'#5C86E8' },
+  Cl: { kind:'element', name:'Chlorine', mass:35, fill:'#BFF2D6', stroke:'#3FB876' },
+  Na: { kind:'element', name:'Sodium',   mass:23, fill:'#E4CBFF', stroke:'#9C5FE0' },
+
+  // Fragments share one muted "still building" sandy tone (rather than
+  // borrowing colors from the finished molecules) so a half-built CH2 or
+  // NH never gets confused with a real, scorable molecule on the board.
+  CH:  { kind:'fragment', mass:13, fill:'#EAE0C6', stroke:'#B8A06A' },
+  CH2: { kind:'fragment', mass:14, fill:'#E6DABC', stroke:'#AC9358' },
+  CH3: { kind:'fragment', mass:15, fill:'#E2D4B0', stroke:'#A08648' },
+  NH:  { kind:'fragment', mass:15, fill:'#E2DBC8', stroke:'#A89A78' },
+  NH2: { kind:'fragment', mass:16, fill:'#DDD2B8', stroke:'#9C8C64' },
+
+  H2:   { kind:'molecule', name:'Hydrogen gas',      mass:2,  points:10, fill:'#DFF3FF', stroke:'#6FC3F0' },
+  O2:   { kind:'molecule', name:'Oxygen gas',        mass:32, points:10, fill:'#FFA184', stroke:'#E85A34' },
+  N2:   { kind:'molecule', name:'Nitrogen gas',      mass:28, points:10, fill:'#9FAEFF', stroke:'#3850D6' },
+  Cl2:  { kind:'molecule', name:'Chlorine gas',      mass:70, points:12, fill:'#8FEAB8', stroke:'#2FA866' },
+  HCl:  { kind:'molecule', name:'Hydrogen chloride', mass:36, points:15, fill:'#E4F27A', stroke:'#A0C22A' },
+  H2O:  { kind:'molecule', name:'Water',             mass:18, points:25, fill:'#5FE0EE', stroke:'#12A0B8' },
+  CO2:  { kind:'molecule', name:'Carbon dioxide',    mass:44, points:25, fill:'#D6C8AC', stroke:'#A2895C' },
+  NH3:  { kind:'molecule', name:'Ammonia',           mass:17, points:30, fill:'#C79CFF', stroke:'#7530D1' },
+  CH4:  { kind:'molecule', name:'Methane',           mass:16, points:30, fill:'#FFD24D', stroke:'#D19000' },
+  CH2O: { kind:'molecule', name:'Formaldehyde',      mass:30, points:32, fill:'#FFE39E', stroke:'#D1A030' },
+  NaCl: { kind:'molecule', name:'Table salt',        mass:58, points:20, fill:'#FFC0DA', stroke:'#E0468A' },
+  NaOH: { kind:'molecule', name:'Sodium hydroxide',  mass:40, points:28, fill:'#E8D9FF', stroke:'#8A4FD1' },
+};
+
+const RECIPES = [
+  { a:'H',  b:'H',  products:['H2'] , points:10 },
+  { a:'O',  b:'O',  products:['O2'] , points:10 },
+  { a:'N',  b:'N',  products:['N2'] , points:10 },
+  { a:'Cl', b:'Cl', products:['Cl2'], points:12 },
+  { a:'H',  b:'Cl', products:['HCl'], points:15 },
+  { a:'Na', b:'Cl', products:['NaCl'],points:20 },
+  { a:'H2', b:'O',  products:['H2O'], points:25 },
+  { a:'O2', b:'C',  products:['CO2'], points:25 },
+
+  { a:'C',   b:'H', products:['CH']  , points:0 },
+  { a:'CH',  b:'H', products:['CH2'] , points:0 },
+  { a:'CH2', b:'H', products:['CH3'] , points:0 },
+  { a:'CH3', b:'H', products:['CH4'] , points:30 },
+  { a:'CH2', b:'O', products:['CH2O'], points:32 },
+
+  { a:'N',   b:'H', products:['NH']  , points:0 },
+  { a:'NH',  b:'H', products:['NH2'] , points:0 },
+  { a:'NH2', b:'H', products:['NH3'] , points:30 },
+
+  { a:'CH4', b:'O2', products:['CO2','H2O','H2O'], points:60, name:'Combustion (methane)' },
+  { a:'Na',  b:'HCl', products:['NaCl','H'], points:20, name:'Sodium + hydrochloric acid' },
+  { a:'Na',  b:'H2O', products:['NaOH','H'], points:22, name:'Sodium + water' },
+  { a:'HCl', b:'NaOH', products:['NaCl','H2O'], points:26, name:'Neutralization' },
+];
+
+const RECIPE_MAP = new Map();
+RECIPES.forEach((r, idx) => {
+  if (r.products[0] === 'CH2O' && !FEATURE_FLAGS.formaldehyde) return;
+  const key = r.a < r.b ? `${r.a}|${r.b}` : `${r.b}|${r.a}`;
+  RECIPE_MAP.set(key, { ...r, index: idx });
+});
+function matchRecipe(idA, idB) {
+  const key = idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
+  return RECIPE_MAP.get(key) || null;
+}
+const SIDEBAR_MERGES = RECIPES.filter(r => r.products.length === 1 && r.points > 0 && (r.products[0] !== 'CH2O' || FEATURE_FLAGS.formaldehyde));
+const SIDEBAR_REACTIONS = RECIPES.filter(r => r.products.length > 1);
+
+const elementKeys = Object.keys(SPECIES).filter(k => SPECIES[k].kind === 'element');
+
+function darkenColor(hex, factor) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(((n >> 16) & 255) * factor);
+  const g = Math.round(((n >> 8) & 255) * factor);
+  const b = Math.round((n & 255) * factor);
+  return `rgb(${r},${g},${b})`;
+}
+function radiusFor(speciesId) {
+  const mass = SPECIES[speciesId].mass;
+  return Math.min(58, 20 + Math.sqrt(mass) * 3.5);
+}
+
+/* =========================================================
+   MATTER.JS SETUP — a simple open-top jar, not a circular dish.
+   ========================================================= */
+const { Engine, World, Bodies, Body, Events, Vector } = Matter;
+
+const engine = Engine.create();
+engine.gravity.y = 1.0;
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = 620, H = 820;
+
+const jarLeft = 70, jarRight = 550, jarTop = 120;
+const wallThickness = 20;
+const maxRadius = Math.max(...Object.keys(SPECIES).map(radiusFor));
+const dropHalfWidth = (jarRight - jarLeft) / 2 - maxRadius - 4;
+const jarCenterX = (jarLeft + jarRight) / 2;
+
+// Straight walls run from jarTop down to bowlCenterY, then a semicircular
+// bowl (radius = half the jar width) takes over. Because the bowl radius
+// equals half the width, the arc's tangent is perfectly vertical right where
+// it meets the straight walls — a seamless join with no ledge for a piece
+// to snag on — and everything funnels toward the center, forcing contact.
+const bowlCenterY = 480;
+const bowlRadius = (jarRight - jarLeft) / 2;
+const jarBottom = bowlCenterY + bowlRadius; // deepest point, for overflow/UI math
+
+(function buildJarWalls() {
+  const wallHeight = (bowlCenterY - jarTop) + wallThickness;
+  const leftWall = Bodies.rectangle(jarLeft - wallThickness / 2, (jarTop + bowlCenterY) / 2, wallThickness, wallHeight, { isStatic:true, friction:0.05, restitution:0.2 });
+  const rightWall = Bodies.rectangle(jarRight + wallThickness / 2, (jarTop + bowlCenterY) / 2, wallThickness, wallHeight, { isStatic:true, friction:0.05, restitution:0.2 });
+  World.add(engine.world, [leftWall, rightWall]);
+
+  const BOWL_SEGMENTS = 16;
+  const bowlBodies = [];
+  const pts = [];
+  for (let i = 0; i <= BOWL_SEGMENTS; i++) {
+    const theta = (Math.PI * i) / BOWL_SEGMENTS; // 0 (left rim) -> PI (right rim), through the bottom at PI/2
+    pts.push({
+      x: jarCenterX - bowlRadius * Math.cos(theta),
+      y: bowlCenterY + bowlRadius * Math.sin(theta),
+    });
+  }
+  for (let i = 0; i < BOWL_SEGMENTS; i++) {
+    const p0 = pts[i], p1 = pts[i + 1];
+    const mx = (p0.x + p1.x) / 2, my = (p0.y + p1.y) / 2;
+    const len = Math.hypot(p1.x - p0.x, p1.y - p0.y) + 1; // +1 to close micro-gaps between segments
+    const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+    const seg = Bodies.rectangle(mx, my, len, wallThickness, { isStatic:true, angle, friction:0.08, restitution:0.15 });
+    bowlBodies.push(seg);
+  }
+  World.add(engine.world, bowlBodies);
+})();
+
+/* =========================================================
+   GAME STATE
+   ========================================================= */
+let blobRegistry = new Map();
+let effects = [];
+let score = 0;
+let gameOver = false;
+let discoveredSpecies = new Set();
+let discoveredReactions = new Set();
+
+// --- high score (persists locally per-mode, in this browser only) ---
+const HIGH_SCORE_KEY = 'genso_highscore_kawaii';
+let bestScore = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0', 10) || 0;
+
+// ===== HIGH SCORES (daily + all-time top 5) — see genso-game.html for
+// the full explanation; identical logic, kawaii-specific storage keys. =====
+const SCORES_ALLTIME_KEY = 'genso_scores_alltime_kawaii';
+const SCORES_DAILY_KEY = 'genso_scores_daily_kawaii';
+
+function todayKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function loadAlltimeScores(){
+  try { return JSON.parse(localStorage.getItem(SCORES_ALLTIME_KEY)) || []; }
+  catch { return []; }
+}
+function loadDailyScores(){
+  try {
+    const rec = JSON.parse(localStorage.getItem(SCORES_DAILY_KEY));
+    if (rec && rec.date === todayKey()) return rec.entries || [];
+    return [];
+  } catch { return []; }
+}
+function saveAlltimeScores(list){ localStorage.setItem(SCORES_ALLTIME_KEY, JSON.stringify(list)); }
+function saveDailyScores(list){ localStorage.setItem(SCORES_DAILY_KEY, JSON.stringify({ date: todayKey(), entries: list })); }
+function insertScore(list, scoreVal, ts){
+  const merged = [...list, { score: scoreVal, ts }];
+  merged.sort((a,b) => b.score - a.score || a.ts - b.ts);
+  const trimmed = merged.slice(0,5);
+  return { list: trimmed, madeTop5: trimmed.some(e => e.ts === ts) };
+}
+function recordFinishedRun(finalScore){
+  const ts = Date.now();
+  const alltime = insertScore(loadAlltimeScores(), finalScore, ts);
+  saveAlltimeScores(alltime.list);
+  const daily = insertScore(loadDailyScores(), finalScore, ts);
+  saveDailyScores(daily.list);
+  return { madeAlltimeTop5: alltime.madeTop5, madeDailyTop5: daily.madeTop5 };
+}
+let beatBestThisRun = false;
+function updateBestDisplay() { document.getElementById('bestVal').textContent = bestScore; }
+updateBestDisplay();
+
+// --- completion bonus: awarded once per run for discovering all 10 molecules ---
+const TOTAL_MOLECULES = Object.entries(SPECIES).filter(([id,s]) => s.kind === 'molecule' && (id !== 'CH2O' || FEATURE_FLAGS.formaldehyde)).length;
+let completionBonusAwarded = false;
+
+let selectedSpecies = 'H';
+let dropX = jarCenterX;
+
+function spawnBlob(speciesId, x, y, vx = 0, vy = 0, spawnedAt = Date.now(), entered = false) {
+  const r = radiusFor(speciesId);
+  const body = Bodies.circle(x, y, r, {
+    restitution: 0.28, friction: 0.18, density: 0.0018,
+    label: 'blob',
+  });
+  Body.setVelocity(body, { x: vx, y: vy });
+  blobRegistry.set(body.id, { speciesId, body, spawnedAt, entered });
+  World.add(engine.world, body);
+
+  const sp = SPECIES[speciesId];
+  if (sp.kind === 'molecule' && !discoveredSpecies.has(speciesId)) {
+    discoveredSpecies.add(speciesId);
+    markSidebarDiscovered(speciesId);
+    if (!completionBonusAwarded && discoveredSpecies.size === TOTAL_MOLECULES) {
+      completionBonusAwarded = true;
+      addScore(200, x, y, 'ALL MOLECULES!', 'huge', 0.6);
+      markSidebarBonus();
+      burst(x, y, '#FFD24D');
+    }
+  }
+  return body;
+}
+
+function addScore(n, x, y, label, size, delay) {
+  if (n <= 0) return;
+  score += n;
+  document.getElementById('scoreVal').textContent = score;
+  effects.push({ type: 'text', x, y, text: `+${n} ${label || ''}`, life: 1.0, size: size || 'normal', delay: delay || 0 });
+  if (score > bestScore) {
+    bestScore = score;
+    localStorage.setItem(HIGH_SCORE_KEY, String(bestScore));
+    updateBestDisplay();
+    beatBestThisRun = true;
+  }
+}
+
+function burst(x, y, color) {
+  effects.push({ type: 'burst', x, y, color, life: 1.0 });
+}
+
+/* =========================================================
+   COLLISION HANDLING — the whole simplified mechanic lives here.
+   Two blobs touch -> look up the pair -> match: swap for the
+   product(s). No match: nothing happens, Matter's own physics
+   resolves it as a normal bounce. Order of contact never matters
+   because matchRecipe() normalizes the pair before lookup.
+   ========================================================= */
+function handleCollisionPair(A, B) {
+  if (gameOver) return;
+  const ea = blobRegistry.get(A.id), eb = blobRegistry.get(B.id);
+  if (!ea || !eb) return;
+  // A piece is only eligible to merge once it's actually landed — otherwise
+  // two pieces falling side-by-side through the drop chute (before either
+  // has touched anything) could merge in mid-air. "Landed" means it has
+  // touched a wall/floor (handled in handleCollisionEvent above) or another
+  // piece that has itself already landed — contact with an entered piece
+  // propagates entry, since resting on top of the pile is landing too, no
+  // matter how tall the pile has grown.
+  if (ea.entered || eb.entered) { ea.entered = true; eb.entered = true; }
+  if (!ea.entered || !eb.entered) return;
+
+  const recipe = matchRecipe(ea.speciesId, eb.speciesId);
+  if (!recipe) return;
+
+  const cx = (A.position.x + B.position.x) / 2;
+  const cy = (A.position.y + B.position.y) / 2;
+  const minSpawnedAt = Math.min(ea.spawnedAt, eb.spawnedAt);
+
+  World.remove(engine.world, A);
+  World.remove(engine.world, B);
+  blobRegistry.delete(A.id);
+  blobRegistry.delete(B.id);
+
+  if (recipe.products.length > 1) {
+    discoveredReactions.add(recipe.index);
+    markSidebarReaction(recipe.index);
+  }
+
+  recipe.products.forEach((pid, i) => {
+    const n = recipe.products.length;
+    const angle = n === 1 ? -Math.PI / 2 : (Math.PI * 2 / n) * i;
+    const vx = n === 1 ? 0 : Math.cos(angle) * 2.5;
+    const vy = n === 1 ? -1.5 : Math.sin(angle) * 2.5 - 1.5;
+    spawnBlob(pid, cx + Math.cos(angle) * 8, cy + Math.sin(angle) * 8, vx, vy, n === 1 ? minSpawnedAt : Date.now(), true);
+  });
+
+  const label = recipe.products.length === 1 ? SPECIES[recipe.products[0]].name : recipe.name;
+  addScore(recipe.points, cx, cy, label, recipe.products.length === 1 ? 'big' : 'normal');
+  burst(cx, cy, SPECIES[recipe.products[0]].fill);
+}
+
+function handleCollisionEvent(evt) {
+  if (gameOver) return;
+  for (const pair of evt.pairs) {
+    // A blob touching a jar wall/floor (a static body) has definitely landed,
+    // regardless of its y-position relative to jarTop — this matters once
+    // the pile is tall enough that "landing" can happen above jarTop.
+    if (pair.bodyA.isStatic || pair.bodyB.isStatic) {
+      const blobEntry = blobRegistry.get(pair.bodyA.isStatic ? pair.bodyB.id : pair.bodyA.id);
+      if (blobEntry) blobEntry.entered = true;
+    }
+    handleCollisionPair(pair.bodyA, pair.bodyB);
+  }
+}
+Events.on(engine, 'collisionStart', handleCollisionEvent);
+Events.on(engine, 'collisionActive', handleCollisionEvent);
+
+function proximityChemistryPass() {
+  if (gameOver) return;
+  const blobs = [...blobRegistry.values()];
+  for (let i = 0; i < blobs.length; i++) {
+    for (let j = i + 1; j < blobs.length; j++) {
+      const A = blobs[i].body, B = blobs[j].body;
+      if (!blobRegistry.has(A.id) || !blobRegistry.has(B.id)) continue;
+      const dx = A.position.x - B.position.x, dy = A.position.y - B.position.y;
+      const touchDist = (A.circleRadius || 0) + (B.circleRadius || 0) + 1.5;
+      if (dx * dx + dy * dy <= touchDist * touchDist) handleCollisionPair(A, B);
+    }
+  }
+}
+Events.on(engine, 'afterUpdate', proximityChemistryPass);
+
+/* =========================================================
+   INPUT — shuffled weighted bag, same as genso-game.html.
+   ========================================================= */
+const DROP_WEIGHTS = { H:2, O:1, C:1, N:1, Cl:1, Na:1 };
+let bag = [];
+function refillBag() {
+  bag = [];
+  for (const sym of elementKeys) {
+    const weight = DROP_WEIGHTS[sym] || 1;
+    for (let k = 0; k < weight; k++) bag.push(sym);
+  }
+  for (let i = bag.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [bag[i], bag[j]] = [bag[j], bag[i]];
+  }
+}
+function drawFromBag() {
+  if (!bag.length) refillBag();
+  return bag.pop();
+}
+
+const nextBadge = document.getElementById('nextBadge');
+selectedSpecies = drawFromBag();
+let nextSpecies = drawFromBag();
+function updateQueueUI() {
+  document.querySelectorAll('.legend-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.sym === selectedSpecies);
+  });
+  const ns = SPECIES[nextSpecies];
+  nextBadge.textContent = nextSpecies;
+  nextBadge.style.color = ns.stroke;
+  nextBadge.style.borderColor = ns.stroke;
+}
+
+const legend = document.getElementById('legend');
+elementKeys.forEach(sym => {
+  const sp = SPECIES[sym];
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.dataset.sym = sym;
+  item.textContent = sym;
+  item.style.background = sp.fill;
+  item.style.color = sp.stroke;
+  legend.appendChild(item);
+});
+updateQueueUI();
+
+/* =========================================================
+   MUSIC — autoplay-with-sound is blocked until a real user
+   gesture, so playback kicks off on the first drop rather than
+   on page load. The mute button just toggles bgm.muted, which
+   keeps the loop running in sync instead of restarting it.
+   ========================================================= */
+const MUSIC_MUTED_KEY = 'genso_music_muted';
+const bgm = document.getElementById('bgm');
+const muteBtn = document.getElementById('muteBtn');
+let musicStarted = false;
+let musicMuted = localStorage.getItem(MUSIC_MUTED_KEY) === 'true';
+bgm.muted = musicMuted;
+muteBtn.textContent = musicMuted ? '🔇 Music' : '🔊 Music';
+
+function startMusicIfNeeded() {
+  if (musicStarted) return;
+  musicStarted = true;
+  bgm.volume = 0.55;
+  bgm.play().catch(() => { musicStarted = false; }); // retry on next gesture if blocked
+}
+muteBtn.addEventListener('click', () => {
+  if (!musicStarted) { musicMuted = false; startMusicIfNeeded(); muteBtn.textContent = '🔊 Music'; localStorage.setItem(MUSIC_MUTED_KEY, 'false'); return; }
+  musicMuted = !musicMuted;
+  bgm.muted = musicMuted;
+  muteBtn.textContent = musicMuted ? '🔇 Music' : '🔊 Music';
+  localStorage.setItem(MUSIC_MUTED_KEY, String(musicMuted));
+});
+
+function pointerToDropX(clientX) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const localX = (clientX - rect.left) * scaleX;
+  return Math.max(jarCenterX - dropHalfWidth, Math.min(jarCenterX + dropHalfWidth, localX));
+}
+canvas.addEventListener('pointermove', (e) => { dropX = pointerToDropX(e.clientX); });
+const DROP_COOLDOWN_MS = 220; // minimum time between drops — stops rapid-tap spam
+let lastDropAt = 0;
+const CONTROL_MODE_KEY = 'genso_control_mode'; // 'tap' | 'drag'
+const controlMode = localStorage.getItem(CONTROL_MODE_KEY) || 'tap';
+let dragging = false;
+
+function commitDrop(){
+  const nowTs = Date.now();
+  if (nowTs - lastDropAt < DROP_COOLDOWN_MS) return;
+  lastDropAt = nowTs;
+  if (!musicMuted) startMusicIfNeeded();
+  spawnBlob(selectedSpecies, dropX, jarTop - 40);
+  selectedSpecies = nextSpecies;
+  nextSpecies = drawFromBag();
+  updateQueueUI();
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (!e.isPrimary) return; // ignore extra simultaneous touches (multi-touch)
+  if (gameOver) return;
+  e.preventDefault();
+  dropX = pointerToDropX(e.clientX);
+  if (controlMode === 'drag'){
+    dragging = true; // wait for release before actually dropping
+  } else {
+    commitDrop();
+  }
+});
+canvas.addEventListener('pointerup', (e) => {
+  if (controlMode !== 'drag' || !dragging) return;
+  dragging = false;
+  dropX = pointerToDropX(e.clientX);
+  commitDrop();
+});
+canvas.addEventListener('pointercancel', () => { dragging = false; });
+
+document.getElementById('resetBtn').addEventListener('click', resetGame);
+document.getElementById('overflowResetBtn').addEventListener('click', resetGame);
+
+/* =========================================================
+   SIDEBAR — always-visible, generated from RECIPES.
+   ========================================================= */
+function buildSidebarContent() {
+  const mergeRows = SIDEBAR_MERGES.map(r => {
+    const id = `sb-merge-${r.products[0]}`;
+    return `<div class="interaction-row" id="${id}">
+       <span class="formula">${r.a}+${r.b} → ${r.products[0]}</span>
+       <span class="pts">+${r.points}</span>
+     </div>`;
+  }).join('');
+
+  const reactionRows = SIDEBAR_REACTIONS.map(r => {
+    const idx = RECIPES.indexOf(r);
+    return `<div class="interaction-row" id="sb-rxn-${idx}">
+       <span class="formula">${r.a}+${r.b} → ${r.products.join('+')}</span>
+       <span class="pts">+${r.points}</span>
+     </div>`;
+  }).join('');
+
+  document.getElementById('sidebarContent').innerHTML = `
+    <div class="sidebar-group">MERGE → MOLECULE</div>
+    ${mergeRows}
+    <div class="sidebar-group">MOLECULE + MOLECULE</div>
+    ${reactionRows}
+    <div class="sidebar-group">BONUS</div>
+    <div class="interaction-row" id="sb-bonus-all">
+       <span class="formula">Discover every molecule</span>
+       <span class="pts">+200</span>
+     </div>
+  `;
+}
+function markSidebarDiscovered(speciesId) {
+  const row = document.getElementById(`sb-merge-${speciesId}`);
+  if (row) row.classList.add('seen');
+}
+function markSidebarReaction(index) {
+  const row = document.getElementById(`sb-rxn-${index}`);
+  if (row) row.classList.add('seen');
+}
+function markSidebarBonus() {
+  const row = document.getElementById('sb-bonus-all');
+  if (row) row.classList.add('seen');
+}
+
+/* =========================================================
+   RULES PANEL
+   ========================================================= */
+function buildRulesContent() {
+  const el = document.getElementById('rulesContent');
+
+  const elementRows = elementKeys.map(sym => {
+    const e = SPECIES[sym];
+    return `<tr><td>${sym}</td><td>${e.name}</td></tr>`;
+  }).join('');
+
+  const moleculeRows = SIDEBAR_MERGES.map(r => {
+    const p = SPECIES[r.products[0]];
+    return `<tr><td>${r.a}+${r.b}</td><td>${p.name}</td><td>${r.points}</td></tr>`;
+  }).join('');
+
+  const reactionRows = SIDEBAR_REACTIONS.map(r =>
+    `<li>${r.a} + ${r.b} → ${r.products.join(' + ')} (${r.name}, +${r.points})</li>`).join('');
+
+  el.innerHTML = `
+    <p>Drop the highlighted element — the one after that is shown in the NEXT
+    badge, drawn from a shuffled bag rather than freely chosen, so you adapt
+    instead of spamming one favorite combo.</p>
+    <p>Every piece is its own little blob. When two blobs touch, they check if
+    that exact pair has a known combo. If yes — they merge into the result
+    immediately. If not, they just bounce. The order pieces touch in never
+    matters, only which two are touching right now.</p>
+
+    <h3>ELEMENTS</h3>
+    <table class="rules-table">
+      <tr><th>Sym</th><th>Name</th></tr>
+      ${elementRows}
+    </table>
+
+    <h3>KNOWN COMBOS</h3>
+    <table class="rules-table">
+      <tr><th>Combo</th><th>Makes</th><th>Points</th></tr>
+      ${moleculeRows}
+    </table>
+
+    <h3>MOLECULE + MOLECULE</h3>
+    <ul>${reactionRows}</ul>
+
+    <h3>BUILDING BIGGER MOLECULES</h3>
+    <p>Methane and ammonia need more hydrogen than a single merge can hold, so
+    they're built as a little chain of quick merges — each step is a real,
+    instant merge, just not the final one yet:</p>
+    <ul>
+      <li>C + H → CH → +H → CH2 → +H → CH3 → +H → <strong>CH4</strong></li>
+      ${FEATURE_FLAGS.formaldehyde ? '<li>CH2 can branch instead: CH2 + O → <strong>CH2O</strong> (formaldehyde)</li>' : ''}
+      <li>N + H → NH → +H → NH2 → +H → <strong>NH3</strong></li>
+    </ul>
+
+    <h3>OVERFLOW</h3>
+    <p>If a piece comes to rest above the dashed line near the top of the jar,
+    the jar has overflowed and the run ends.</p>
+  `;
+}
+buildRulesContent();
+buildSidebarContent();
+
+const rulesPanel = document.getElementById('rulesPanel');
+document.getElementById('rulesBtn').addEventListener('click', () => rulesPanel.classList.add('show'));
+document.getElementById('closeRulesBtn').addEventListener('click', () => rulesPanel.classList.remove('show'));
+rulesPanel.addEventListener('click', (e) => { if (e.target === rulesPanel) rulesPanel.classList.remove('show'); });
+
+const sidebarEl = document.getElementById('sidebar');
+const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+function openSidebar(){ sidebarEl.classList.add('open'); sidebarBackdrop.classList.add('open'); }
+function closeSidebar(){ sidebarEl.classList.remove('open'); sidebarBackdrop.classList.remove('open'); }
+document.getElementById('combosBtn').addEventListener('click', () => {
+  sidebarEl.classList.contains('open') ? closeSidebar() : openSidebar();
+});
+document.getElementById('closeSidebarBtn').addEventListener('click', closeSidebar);
+sidebarBackdrop.addEventListener('click', closeSidebar);
+
+function resetGame() {
+  for (const { body } of blobRegistry.values()) World.remove(engine.world, body);
+  blobRegistry.clear();
+  score = 0; document.getElementById('scoreVal').textContent = '0';
+  discoveredSpecies.clear(); discoveredReactions.clear();
+  completionBonusAwarded = false;
+  beatBestThisRun = false;
+  document.querySelectorAll('.interaction-row.seen').forEach(el => el.classList.remove('seen'));
+  gameOver = false;
+  document.getElementById('overflowScreen').classList.remove('show');
+  document.getElementById('overflowRankMsg').textContent = '';
+  aboveLineSince.clear();
+  bag = [];
+  selectedSpecies = drawFromBag();
+  nextSpecies = drawFromBag();
+  updateQueueUI();
+}
+
+/* =========================================================
+   OVERFLOW CHECK
+   ========================================================= */
+const overflowY = jarTop - 40;
+const OVERFLOW_GRACE_MS = 1200;
+// See the equivalent comment in genso-game.html: a near-zero-speed check
+// used to decide a piece had "come to rest" above the fill line, but
+// continuous rapid drops keep the whole pile jostling, so the run could
+// visibly overflow and never end. Tracking sustained time above the line
+// instead catches that, while still giving a piece that just grazes the
+// line for an instant a pass.
+const OVERFLOW_SUSTAIN_MS = 500;
+const aboveLineSince = new Map(); // bodyId -> timestamp first seen above the line, this stretch
+setInterval(() => {
+  if (gameOver) return;
+  const now = Date.now();
+  const stillAbove = new Set();
+  for (const entry of blobRegistry.values()) {
+    if (now - entry.spawnedAt < OVERFLOW_GRACE_MS) continue;
+    const b = entry.body;
+    if (b.position.x < jarLeft - 10 || b.position.x > jarRight + 10) continue;
+    if (b.position.y >= overflowY) continue; // below the fill line — fine
+
+    stillAbove.add(b.id);
+    const firstSeen = aboveLineSince.get(b.id);
+    if (firstSeen === undefined) {
+      aboveLineSince.set(b.id, now);
+    } else if (now - firstSeen >= OVERFLOW_SUSTAIN_MS) {
+      gameOver = true;
+      document.getElementById('overflowScore').textContent = beatBestThisRun
+        ? `New best — ${score}! 🎉`
+        : `Final score: ${score}`;
+      const rank = recordFinishedRun(score);
+      document.getElementById('overflowRankMsg').textContent =
+        rank.madeAlltimeTop5 && rank.madeDailyTop5 ? "🏆 New All-Time AND Today's Top 5!" :
+        rank.madeAlltimeTop5 ? '🏆 New All-Time Top 5!' :
+        rank.madeDailyTop5 ? "⭐ Made Today's Top 5!" : '';
+      document.getElementById('overflowScreen').classList.add('show');
+      break;
+    }
+  }
+  for (const id of aboveLineSince.keys()) {
+    if (!stillAbove.has(id)) aboveLineSince.delete(id);
+  }
+}, 200);
+
+/* =========================================================
+   RENDER — glossy pastel blobs with kawaii faces
+   ========================================================= */
+function drawJar() {
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(jarLeft, jarTop - 40);
+  ctx.lineTo(jarLeft, bowlCenterY);
+  ctx.arc(jarCenterX, bowlCenterY, bowlRadius, Math.PI, 0, true);
+  ctx.lineTo(jarRight, jarTop - 40);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fill();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.stroke();
+
+  ctx.setLineDash([8, 6]);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255,158,122,0.6)';
+  ctx.beginPath();
+  ctx.moveTo(jarLeft + 6, overflowY);
+  ctx.lineTo(jarRight - 6, overflowY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (!gameOver) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    ctx.moveTo(dropX, 95);
+    ctx.lineTo(dropX, jarTop - 50);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
+function drawFace(r) {
+  ctx.fillStyle = 'rgba(60,45,40,0.75)';
+  const eyeDx = r * 0.32, eyeDy = -r * 0.18, eyeR = Math.max(1.4, r * 0.09);
+  ctx.beginPath(); ctx.arc(-eyeDx, eyeDy, eyeR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(eyeDx, eyeDy, eyeR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(60,45,40,0.75)';
+  ctx.lineWidth = Math.max(1.2, r * 0.07);
+  ctx.lineCap = 'round';
+  ctx.arc(0, eyeDy + r * 0.18, r * 0.22, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.stroke();
+}
+
+function drawBlob(entry) {
+  const { speciesId, body, spawnedAt } = entry;
+  const sp = SPECIES[speciesId];
+  const r = radiusFor(speciesId);
+  const age = Date.now() - spawnedAt;
+  const pop = age < 180 ? 0.55 + 0.45 * (age / 180) : 1;
+
+  ctx.save();
+  ctx.translate(body.position.x, body.position.y);
+  ctx.scale(pop, pop);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fillStyle = sp.fill;
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = sp.stroke;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.32, -r * 0.38, r * 0.32, r * 0.2, -0.5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fill();
+
+  drawFace(r);
+
+  ctx.fillStyle = darkenColor(sp.stroke, 0.55);
+  ctx.font = `700 ${Math.max(9, r * 0.36)}px 'Baloo 2', sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(speciesId, 0, r * 0.42);
+
+  ctx.restore();
+}
+
+function drawEffects(dt) {
+  for (let i = effects.length - 1; i >= 0; i--) {
+    const fx = effects[i];
+    if (fx.delay > 0){ fx.delay -= dt; continue; } // not yet due — held invisible
+    fx.life -= dt * 0.9;
+    if (fx.life <= 0) { effects.splice(i, 1); continue; }
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, fx.life);
+    if (fx.type === 'text') {
+      ctx.fillStyle = fx.size==='huge' ? '#FFD24D' : '#FF9E7A';
+      const px = fx.size==='huge' ? 30 : fx.size==='big' ? 23 : 16;
+      const rise = fx.size==='huge' ? 54 : fx.size==='big' ? 42 : 34;
+      ctx.font = `700 ${px}px 'Baloo 2', sans-serif`;
+      ctx.textAlign = 'center';
+      if (fx.size==='huge' || fx.size==='big'){
+        ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 6;
+      }
+      ctx.fillText(fx.text, fx.x, fx.y - (1 - fx.life) * rise);
+    } else if (fx.type === 'burst') {
+      ctx.strokeStyle = fx.color || '#FF9E7A';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(fx.x, fx.y, (1 - fx.life) * 44, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawPreview() {
+  if (gameOver) return;
+  const sp = SPECIES[selectedSpecies];
+  const r = radiusFor(selectedSpecies);
+  const y = jarTop - 55;
+  ctx.save();
+  ctx.globalAlpha = 0.75;
+  ctx.beginPath();
+  ctx.arc(dropX, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = sp.fill;
+  ctx.fill();
+  ctx.strokeStyle = sp.stroke;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.fillStyle = sp.stroke;
+  // Before it drops, the player hasn't seen a face yet — so the symbol is
+  // the whole point of this circle. Size it large (most of the circle's
+  // diameter) so it reads instantly, unlike the smaller label used once
+  // landed atoms already have a face to carry visual weight.
+  ctx.font = `700 ${r * 1.15}px 'Baloo 2', sans-serif`;
+  ctx.textAlign = 'center';
+  // textBaseline:'middle' centers using the font's overall ascent/descent
+  // metrics, which reserve room for descenders (like 'g' or 'y') that none
+  // of our symbols (H, O, C, N, Cl, Na) actually use. That reserved-but-empty
+  // space below the baseline pushes the visible glyph above true center.
+  // Measuring the actual rendered ink and centering on that instead fixes it.
+  ctx.textBaseline = 'alphabetic';
+  const metrics = ctx.measureText(selectedSpecies);
+  const glyphHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+  const baselineY = y + glyphHeight / 2 - metrics.actualBoundingBoxDescent;
+  ctx.fillText(selectedSpecies, dropX, baselineY);
+  ctx.restore();
+}
+
+let lastTime = performance.now();
+function renderLoop(now) {
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+  Engine.update(engine, dt * 1000);
+
+  ctx.clearRect(0, 0, W, H);
+  drawJar();
+  for (const entry of blobRegistry.values()) drawBlob(entry);
+  drawPreview();
+  drawEffects(dt);
+
+  requestAnimationFrame(renderLoop);
+}
+requestAnimationFrame(renderLoop);
+
+/* =========================================================
+   FIRST-TIME TUTORIAL (coach marks)
+   A short guided tour shown once per mode, the first time a new
+   player opens it. Dims the screen, highlights one thing at a time,
+   and shows a small callout. Nothing in the game itself is changed or
+   paused — the overlay simply sits on top and swallows touches, and the
+   dish is empty at that point so nothing is running underneath.
+
+   Storage key genso_tutorial_seen_<mode>:
+     'true'   -> already seen, never show again
+     'replay' -> player asked for it via Settings (index.html), show it
+     unset    -> first visit: show only if there's no saved best score
+                 (players who installed before this update already know
+                 the game, so they're marked as seen silently)
+   ========================================================= */
+(function gensoTutorial(){
+  try {
+  const MODE = 'kawaii';
+  const KEY = 'genso_tutorial_seen_' + MODE;
+  const stored = localStorage.getItem(KEY);
+  if (stored === 'true') return;
+  if (stored === null && bestScore > 0){ localStorage.setItem(KEY, 'true'); return; }
+
+  /* ---------- per-mode config ---------- */
+  const THEME = {
+    dim:'rgba(70,45,35,0.58)', accent:'#FF9E7A',
+    bubbleBg:'#FFFFFF', bubbleBorder:'rgba(255,158,122,0.45)', text:'#5B4A42', dimText:'#9C8C82',
+    font:"'Quicksand', sans-serif", titleFont:"'Baloo 2', 'Fredoka', sans-serif",
+    radius:'22px', btnRadius:'999px', titleCase:'none', letter:'0',
+    btnBg:'#FF9E7A', btnColor:'#FFFFFF', btnBorder:'#FF9E7A',
+    shadow:'0 12px 36px rgba(120,80,60,.3)'
+  };
+  const LABELS = { skip:'Skip tour', next:'Next', done:'Got it!' };
+
+  // The whole jar plus the drop zone above it, in canvas coordinates.
+  function jarHole(){
+    return holeOfCanvas(jarLeft - 14, jarTop - 95, jarRight + 14, jarBottom + 14, 30);
+  }
+  function buildSteps(){
+    return [
+      { title:'Welcome!',
+        text:"Here's a quick tour before your first round. Nothing will drop until you're done, and it only takes a few seconds.",
+        btn:'Show me' },
+      { title:'Your next blob',
+        text:"The bigger, brighter one at the bottom is the one you'll drop. NEXT shows what comes after it, so you can plan ahead.",
+        holes:() => [ holeOfEl(document.querySelector('.legend-item.active'), 6, 999), holeOfEl(document.getElementById('nextBadge'), 6, 999) ] },
+      { title:'The jar',
+        text: (dragMode
+          ? "Touch and drag along the top of the jar to aim, then let go to drop. "
+          : "Tap along the top of the jar to drop it there. ")
+          + "When two blobs that make a combo touch, they merge!",
+        holes:() => [ jarHole() ] },
+      { title:'Need a hint?',
+        text:'COMBOS shows every merge you can make. RULES explains how it all works.',
+        foot:'You can replay this tour anytime from Settings on the start screen.',
+        holes:() => [ holeOfEl(document.getElementById('combosBtn'), 6, 999), holeOfEl(document.getElementById('rulesBtn'), 6, 999) ] }
+    ];
+  }
+
+  /* ---------- helpers ---------- */
+  const NS = 'http://www.w3.org/2000/svg';
+  const dragMode = (typeof controlMode !== 'undefined') && controlMode === 'drag';
+
+  // Turn a DOM element into a highlight rectangle (viewport coordinates).
+  function holeOfEl(el, pad, radius){
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    pad = pad == null ? 6 : pad;
+    return { x:r.left - pad, y:r.top - pad, w:r.width + pad*2, h:r.height + pad*2, r: radius == null ? 14 : radius };
+  }
+  // Turn a rectangle in canvas-internal coordinates into viewport coordinates.
+  function holeOfCanvas(left, top, right, bottom, radius){
+    const c = canvas.getBoundingClientRect();
+    const sx = c.width / W, sy = c.height / H;
+    return { x:c.left + left*sx, y:c.top + top*sy, w:(right-left)*sx, h:(bottom-top)*sy, r: radius == null ? 24 : radius };
+  }
+
+  /* ---------- styles ---------- */
+  const style = document.createElement('style');
+  style.textContent = `
+  #tutOverlay{
+    position:fixed; inset:0; z-index:1000;
+    opacity:0; transition:opacity .25s ease;
+    touch-action:none; -webkit-user-select:none; user-select:none;
+    font-family:${THEME.font};
+  }
+  #tutOverlay.show{ opacity:1; }
+  #tutSvg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #tutSvg .tut-dim{ fill:${THEME.dim}; }
+  #tutSvg .tut-ring{
+    fill:none; stroke:${THEME.accent}; stroke-width:2.5;
+    animation:tutPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes tutPulse{ 0%,100%{ stroke-opacity:1; } 50%{ stroke-opacity:.35; } }
+  #tutBubble{
+    position:absolute; box-sizing:border-box;
+    background:${THEME.bubbleBg}; color:${THEME.text};
+    border:1px solid ${THEME.bubbleBorder};
+    border-radius:${THEME.radius};
+    box-shadow:${THEME.shadow};
+    padding:16px 18px 14px;
+    animation:tutIn .28s ease both;
+  }
+  @keyframes tutIn{ from{ opacity:0; transform:translateY(6px) scale(.97); } to{ opacity:1; transform:none; } }
+  #tutBubble .tut-step{ font-size:11px; letter-spacing:1px; color:${THEME.dimText}; margin-bottom:6px; }
+  #tutBubble .tut-title{
+    font-family:${THEME.titleFont}; font-weight:700; font-size:17px;
+    color:${THEME.accent}; margin-bottom:6px;
+    text-transform:${THEME.titleCase}; letter-spacing:${THEME.letter};
+  }
+  #tutBubble .tut-text{ font-size:14px; line-height:1.5; }
+  #tutBubble .tut-foot{ font-size:12px; line-height:1.45; color:${THEME.dimText}; margin-top:10px; }
+  #tutBubble .tut-actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:14px; }
+  #tutBubble button{
+    font-family:${THEME.font}; font-size:13px; font-weight:700; cursor:pointer;
+    border-radius:${THEME.btnRadius}; padding:9px 16px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #tutBubble .tut-skip{ background:transparent; border:none; color:${THEME.dimText}; padding:9px 4px; }
+  #tutBubble .tut-next{ background:${THEME.btnBg}; color:${THEME.btnColor}; border:1px solid ${THEME.btnBorder}; }
+  #tutBubble .tut-next:active{ transform:scale(.96); }
+  `;
+  document.head.appendChild(style);
+
+  /* ---------- overlay ---------- */
+  let overlay, holesG, ringsG, bubble, idx = 0, raf = 0;
+  const steps = buildSteps();
+
+  function build(){
+    overlay = document.createElement('div');
+    overlay.id = 'tutOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.innerHTML =
+      '<svg id="tutSvg" aria-hidden="true">' +
+        '<defs><mask id="tutMask"><rect width="100%" height="100%" fill="#fff"/><g id="tutHoles"></g></mask></defs>' +
+        '<rect class="tut-dim" width="100%" height="100%" mask="url(#tutMask)"/>' +
+        '<g id="tutRings"></g>' +
+      '</svg>' +
+      '<div id="tutBubble">' +
+        '<div class="tut-step"></div>' +
+        '<div class="tut-title"></div>' +
+        '<div class="tut-text"></div>' +
+        '<div class="tut-foot"></div>' +
+        '<div class="tut-actions">' +
+          '<button type="button" class="tut-skip">' + LABELS.skip + '</button>' +
+          '<button type="button" class="tut-next"></button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    holesG = overlay.querySelector('#tutHoles');
+    ringsG = overlay.querySelector('#tutRings');
+    bubble = overlay.querySelector('#tutBubble');
+    overlay.querySelector('.tut-next').addEventListener('click', next);
+    overlay.querySelector('.tut-skip').addEventListener('click', finish);
+    // keep touches/scrolls from reaching the game underneath
+    overlay.addEventListener('touchmove', (e) => e.preventDefault(), { passive:false });
+  }
+
+  function clampHole(h){
+    const vw = window.innerWidth, vh = window.innerHeight, m = 4;
+    const x1 = Math.max(m, h.x), y1 = Math.max(m, h.y);
+    const x2 = Math.min(vw - m, h.x + h.w), y2 = Math.min(vh - m, h.y + h.h);
+    return { x:x1, y:y1, w:Math.max(0, x2 - x1), h:Math.max(0, y2 - y1), r:h.r };
+  }
+
+  function render(){
+    const s = steps[idx];
+    const holes = (s.holes ? s.holes() : []).filter(Boolean).map(clampHole).filter(h => h.w > 0 && h.h > 0);
+
+    holesG.textContent = '';
+    ringsG.textContent = '';
+    for (const h of holes){
+      const rx = Math.min(h.r, h.w/2, h.h/2);
+      const make = (parent) => {
+        const r = document.createElementNS(NS, 'rect');
+        r.setAttribute('x', h.x); r.setAttribute('y', h.y);
+        r.setAttribute('width', h.w); r.setAttribute('height', h.h);
+        r.setAttribute('rx', rx); r.setAttribute('ry', rx);
+        parent.appendChild(r);
+        return r;
+      };
+      make(holesG).setAttribute('fill', '#000');
+      make(ringsG).setAttribute('class', 'tut-ring');
+    }
+
+    const last = idx === steps.length - 1;
+    bubble.querySelector('.tut-step').textContent = (idx + 1) + ' / ' + steps.length;
+    bubble.querySelector('.tut-title').textContent = s.title;
+    bubble.querySelector('.tut-text').textContent = s.text;
+    const foot = bubble.querySelector('.tut-foot');
+    foot.textContent = s.foot || '';
+    foot.style.display = s.foot ? 'block' : 'none';
+    bubble.querySelector('.tut-next').textContent = s.btn || (last ? LABELS.done : LABELS.next);
+    bubble.querySelector('.tut-skip').style.visibility = last ? 'hidden' : 'visible';
+
+    // restart the little entrance animation on every step
+    bubble.style.animation = 'none'; void bubble.offsetWidth; bubble.style.animation = '';
+    placeBubble(holes);
+  }
+
+  function placeBubble(holes){
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const bw = Math.min(330, vw - 24);
+    bubble.style.width = bw + 'px';
+    const bh = bubble.offsetHeight;
+    const gap = 16;
+    let left, top;
+    if (!holes.length){
+      left = (vw - bw) / 2;
+      top = (vh - bh) / 2;
+    } else {
+      const x1 = Math.min(...holes.map(h => h.x)), y1 = Math.min(...holes.map(h => h.y));
+      const x2 = Math.max(...holes.map(h => h.x + h.w)), y2 = Math.max(...holes.map(h => h.y + h.h));
+      const above = y1, below = vh - y2;
+      left = (x1 + x2) / 2 - bw / 2;
+      if (below >= bh + gap + 8 && below >= above) top = y2 + gap;
+      else if (above >= bh + gap + 8) top = y1 - bh - gap;
+      else if (below >= bh + gap + 8) top = y2 + gap;
+      else top = y1 + (y2 - y1) * 0.6 - bh / 2; // no room around it: sit inside the highlight, below its top edge
+    }
+    left = Math.max(12, Math.min(left, vw - bw - 12));
+    top = Math.max(12, Math.min(top, vh - bh - 12));
+    bubble.style.left = left + 'px';
+    bubble.style.top = top + 'px';
+  }
+
+  function next(){
+    if (idx >= steps.length - 1){ finish(); return; }
+    idx++;
+    render();
+  }
+
+  function finish(){
+    localStorage.setItem(KEY, 'true');
+    window.removeEventListener('resize', onResize);
+    window.removeEventListener('orientationchange', onResize);
+    overlay.classList.remove('show');
+    setTimeout(() => { overlay.remove(); style.remove(); }, 280);
+  }
+
+  function onResize(){
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => { if (overlay && overlay.isConnected) render(); });
+  }
+
+  function start(attempt){
+    // wait until the layout has real dimensions before measuring anything
+    const c = canvas.getBoundingClientRect();
+    if ((c.width < 50 || c.height < 50) && attempt < 12){ setTimeout(() => start(attempt + 1), 150); return; }
+    build();
+    render();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+  }
+  setTimeout(() => start(0), 600);
+
+  } catch (err) {
+    // The tutorial is a nicety — if anything in it fails, the game must carry on untouched.
+    console.warn('Tutorial skipped:', err);
+  }
+})();
+</script>
+<script src="assets/js/app-lifecycle.js"></script>
+<script src="assets/js/web-shell.js"></script>
+</body>
+</html>

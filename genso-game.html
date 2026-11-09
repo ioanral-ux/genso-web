@@ -1,0 +1,1856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Genso">
+<meta name="theme-color" content="#0B3D66">
+
+<title>GENSO GAME — Prototype</title>
+<link href="assets/fonts/fonts.css" rel="stylesheet">
+<style>
+  :root{
+    --bp-bg: #0B3D66;
+    --bp-bg-2: #082C4A;
+    --bp-line: #4A85B8;
+    --bp-line-strong: #BFE3FF;
+    --bp-accent: #FFC145;
+    --bp-text: #D8ECFF;
+    --bp-text-dim: #7FAFD8;
+    --bp-panel: rgba(8,44,74,0.88);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: var(--bp-bg-2);
+    color: var(--bp-text);
+    font-family:'JetBrains Mono', monospace;
+    overflow:hidden;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #stage{
+    position:relative;
+    width:100%; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px;
+    overflow:auto;
+    padding:12px 0;
+    --dish-size: min(620px, 68vw, 62vh);
+  }
+  canvas#bg{
+    position:absolute; inset:0; width:100%; height:100%;
+    z-index:0;
+  }
+  .main-row{
+    position:relative;
+    z-index:1;
+    display:flex; flex-wrap:wrap;
+    align-items:flex-start; justify-content:center;
+    gap:14px;
+    max-width:98vw;
+    flex:0 0 auto;
+  }
+  .playfield-col{
+    display:flex; flex-direction:column; align-items:center;
+    gap:14px;
+    flex:0 0 auto;
+  }
+  .playfield{
+    position:relative;
+    width: var(--dish-size);
+    aspect-ratio: 700 / 820;
+    flex:0 0 auto;
+  }
+  canvas#game{
+    position:relative; z-index:2;
+    touch-action:none;
+    cursor: crosshair;
+    width:100%; height:100%;
+    display:block;
+  }
+  .hud{
+    position:absolute; z-index:3;
+    color: var(--bp-text);
+    pointer-events:none;
+  }
+  .title-block{
+    top:18px; left:18px;
+    pointer-events:auto;
+  }
+  .title-block img{
+    display:block;
+    width:255px; height:auto;
+  }
+  .score-block{
+    top:18px; right:18px; text-align:right;
+  }
+  .score-block .label{
+    font-size:10px; letter-spacing:2px; color: var(--bp-text-dim);
+  }
+  .score-block .value{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:34px; font-weight:700; color: var(--bp-accent);
+    line-height:1;
+  }
+  .score-block .best{
+    font-size:10px; letter-spacing:1px; color: var(--bp-text-dim);
+    margin-top:2px;
+  }
+  .score-block .best span{ color: var(--bp-line-strong); font-weight:700; }
+  .next-block{
+    top:88px; right:18px; text-align:right;
+    display:flex; align-items:center; gap:8px; justify-content:flex-end;
+  }
+  .next-block .label{
+    font-size:9px; letter-spacing:2px; color: var(--bp-text-dim);
+  }
+  .next-piece-badge{
+    width:34px; height:34px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace; font-weight:700; font-size:13px;
+    border:2px solid var(--bp-line); background: rgba(255,255,255,0.05);
+  }
+  .palette{
+    position:relative;
+    z-index:1;
+    flex:0 0 auto;
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center;
+    pointer-events:auto;
+    background: var(--bp-panel);
+    border:1px solid var(--bp-line);
+    padding:10px;
+    border-radius:2px;
+    max-width:96vw;
+  }
+  .elem-btn{
+    width:52px; height:52px;
+    border:1px solid var(--bp-line);
+    background: rgba(191,227,255,0.05);
+    color: var(--bp-text);
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:16px;
+    cursor:default;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:2px;
+    transition: all 0.12s ease;
+    position:relative;
+  }
+  .elem-btn .valence-tag{
+    font-size:8px; color: var(--bp-text-dim); font-weight:400;
+  }
+  .elem-btn.active{
+    border-color: var(--bp-accent);
+    background: rgba(255,193,69,0.18);
+    box-shadow: 0 0 0 1px var(--bp-accent);
+  }
+  .sidebar{
+    position:relative;
+    z-index:1;
+    width:200px;
+    max-height: var(--dish-size);
+    flex:0 0 auto;
+    pointer-events:auto;
+    background: var(--bp-panel);
+    border:1px solid var(--bp-line);
+    padding:10px 12px;
+    overflow-y:auto;
+  }
+  .sidebar .sidebar-title{
+    font-size:10px; letter-spacing:2px; color: var(--bp-text-dim);
+    border-bottom:1px solid var(--bp-line); padding-bottom:6px; margin-bottom:8px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .sidebar .sidebar-group{
+    font-size:9px; letter-spacing:1.5px; color: var(--bp-accent);
+    margin:10px 0 4px 0;
+  }
+  .sidebar .sidebar-group:first-of-type{ margin-top:0; }
+  .interaction-row{
+    font-size:11px; padding:3px 0; color: var(--bp-text-dim);
+    display:flex; justify-content:space-between; gap:6px;
+    line-height:1.3;
+  }
+  .interaction-row .formula{ white-space:nowrap; }
+  .interaction-row .pts{ color: var(--bp-accent); flex:0 0 auto; }
+  .interaction-row.seen{ color: var(--bp-text); }
+  .interaction-row.seen .formula{ font-weight:700; }
+  .reset-btn{
+    top:18px; left:18px; margin-top:102px;
+    pointer-events:auto;
+  }
+  #resetBtn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:1px;
+    background:transparent; border:1px solid var(--bp-line);
+    color: var(--bp-text-dim); padding:6px 10px; cursor:pointer;
+    width:88px; text-align:center;
+  }
+  #resetBtn:hover{ border-color: var(--bp-line-strong); color: var(--bp-text); }
+  .overflow-screen{
+    position:absolute; inset:0; z-index:10;
+    background: rgba(8,20,34,0.9);
+    display:none; align-items:center; justify-content:center;
+    flex-direction:column; gap:14px;
+    text-align:center;
+  }
+  .overflow-screen.show{ display:flex; }
+  .overflow-screen h2{
+    font-family:'Space Grotesk', sans-serif;
+    color: var(--bp-accent); font-size:28px; letter-spacing:2px; margin:0;
+  }
+  .overflow-screen p{ color: var(--bp-text-dim); font-size:13px; margin:0; }
+  #overflowRankMsg{ color: var(--bp-accent); font-size:13px; font-weight:700; min-height:16px; }
+  .rules-btn{
+    top:18px; left:50%; transform:translateX(-50%);
+    pointer-events:auto;
+  }
+  #rulesBtn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:1px;
+    background:transparent; border:1px solid var(--bp-line);
+    color: var(--bp-text-dim); padding:6px 10px; cursor:pointer;
+  }
+  #rulesBtn:hover{ border-color: var(--bp-line-strong); color: var(--bp-text); }
+  .mute-btn{
+    top:18px; left:18px; margin-top:146px;
+    pointer-events:auto;
+  }
+  .back-btn{
+    top:18px; left:18px; margin-top:190px;
+    pointer-events:auto;
+  }
+  .combos-btn{
+    top:18px; left:18px; margin-top:234px;
+    pointer-events:auto;
+  }
+  #combosBtn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:1px;
+    background:transparent; border:1px solid var(--bp-line);
+    color: var(--bp-text-dim); padding:6px 10px; cursor:pointer;
+  }
+  #combosBtn:hover{ border-color: var(--bp-line-strong); color: var(--bp-text); }
+  #backBtn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:1px;
+    background:transparent; border:1px solid var(--bp-line);
+    color: var(--bp-text-dim); padding:6px 10px; cursor:pointer;
+  }
+  #backBtn:hover{ border-color: var(--bp-line-strong); color: var(--bp-text); }
+
+  /* =========================================================
+     MOBILE LAYOUT — the desktop HUD overlays title/score/buttons
+     directly on top of the dish, which only works when the dish
+     is wide (desktop). On phones the dish shrinks to ~68vw and
+     those overlays collide. Below ~640px we detach the HUD from
+     the dish (position:fixed to the viewport instead of absolute
+     inside .playfield) and lay it out as a proper top toolbar,
+     then let the dish grow to use the freed-up space.
+     ========================================================= */
+  @media (max-width: 640px){
+    :root{ --safe-top: max(24px, env(safe-area-inset-top, 24px)); }
+    #stage{ padding-top:calc(214px + var(--safe-top)); padding-bottom:8px; justify-content:center; --dish-size: min(680px, calc(100vw - 16px), 58vh); }
+
+    .hud{ position:fixed; }
+
+    .title-block{ top:calc(10px + var(--safe-top)); left:12px; margin-top:0; }
+    .title-block img{ width:180px; }
+
+    .score-block{ top:calc(8px + var(--safe-top)); right:12px; }
+    .score-block .value{ font-size:22px; }
+
+    .next-block{ top:calc(172px + var(--safe-top)); right:12px; left:auto; margin-top:0; text-align:right; justify-content:flex-end; }
+
+    .back-btn{ top:calc(104px + var(--safe-top)); left:12px; margin-top:0; }
+    .reset-btn{ top:calc(104px + var(--safe-top)); left:50%; transform:translateX(-100px); margin-top:0; }
+    .rules-btn{ top:calc(104px + var(--safe-top)); left:auto; right:12px; transform:none; }
+    .mute-btn{ top:calc(138px + var(--safe-top)); left:50%; transform:translateX(-100px); margin-top:0; }
+    .combos-btn{ top:calc(138px + var(--safe-top)); left:auto; right:12px; margin-top:0; }
+
+    #resetBtn, #rulesBtn, #muteBtn, #backBtn, #combosBtn{ font-size:10px; padding:5px 8px; }
+
+    .palette{ gap:5px; padding:6px; }
+    .elem-btn{ width:44px; height:44px; font-size:13px; gap:1px; }
+    .elem-btn .valence-tag{ font-size:7px; }
+
+    /* Combos sidebar becomes a slide-in drawer instead of an always-visible
+       panel below the fold — it now overlays the play area from the right
+       and doesn't add to page height at all. */
+    .sidebar{
+      position:fixed; top:50%; right:0; height:auto; max-height:70vh; width:78vw; max-width:300px;
+      transform:translateY(-50%) translateX(100%);
+      transition: transform 0.28s ease;
+      z-index:60; box-shadow:-6px 0 24px rgba(0,0,0,0.5);
+    }
+    .sidebar.open{ transform:translateY(-50%) translateX(0); }
+    .sidebar-backdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,0.4);
+      z-index:55; opacity:0; pointer-events:none; transition: opacity 0.28s ease;
+    }
+    .sidebar-backdrop.open{ opacity:1; pointer-events:auto; }
+  }
+  #muteBtn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:1px;
+    background:transparent; border:1px solid var(--bp-line);
+    color: var(--bp-text-dim); padding:6px 10px; cursor:pointer;
+    width:88px; text-align:center;
+  }
+  #muteBtn:hover{ border-color: var(--bp-line-strong); color: var(--bp-text); }
+  .rules-panel{
+    position:absolute; inset:0; z-index:11;
+    background: rgba(8,20,34,0.94);
+    display:none; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  .rules-panel.show{ display:flex; pointer-events:auto; }
+  .rules-card{
+    width:88%; max-width:520px; max-height:82%;
+    overflow-y:auto;
+    background: var(--bp-panel);
+    border:1px solid var(--bp-line-strong);
+    padding:18px 20px;
+  }
+  .rules-card h2{
+    font-family:'Space Grotesk', sans-serif;
+    color: var(--bp-line-strong); font-size:18px; letter-spacing:1px;
+    margin:0 0 10px 0;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .rules-card h3{
+    font-size:11px; letter-spacing:2px; color: var(--bp-accent);
+    margin:16px 0 6px 0; border-bottom:1px solid var(--bp-line); padding-bottom:4px;
+  }
+  .rules-card p, .rules-card li{ font-size:12px; line-height:1.5; color: var(--bp-text); }
+  .rules-card ul{ margin:4px 0; padding-left:18px; }
+  .rules-table{ width:100%; border-collapse:collapse; font-size:11px; margin-top:4px; }
+  .rules-table td, .rules-table th{ padding:3px 6px; border-bottom:1px solid rgba(191,227,255,0.15); text-align:left; }
+  .rules-table th{ color: var(--bp-text-dim); font-weight:500; }
+  #closeRulesBtn{
+    font-family:'JetBrains Mono', monospace; font-size:14px;
+    background:transparent; border:none; color: var(--bp-text-dim); cursor:pointer;
+  }
+  #closeRulesBtn:hover{ color: var(--bp-accent); }
+  .overflow-line-label{
+    position:absolute; z-index:1; pointer-events:none;
+    font-size:9px; letter-spacing:1px; color: rgba(255,193,69,0.7);
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bg"></canvas>
+
+  <div class="main-row">
+    <div class="playfield-col">
+      <div class="playfield">
+        <canvas id="game" width="700" height="820"></canvas>
+
+        <div class="hud title-block">
+          <img src="assets/images/lab_banner_2.png" alt="Genso Game — Lab Edition">
+        </div>
+        <div class="hud back-btn"><button id="backBtn" onclick="location.href='index.html'">← BACK</button></div>
+        <div class="hud reset-btn"><button id="resetBtn">↺ RESET</button></div>
+        <div class="hud rules-btn"><button id="rulesBtn">? RULES</button></div>
+        <div class="hud mute-btn"><button id="muteBtn">♪ MUSIC</button></div>
+        <div class="hud combos-btn"><button id="combosBtn">COMBOS</button></div>
+
+        <audio id="bgm" src="assets/audio/genso_theme_lab.mp3" loop preload="auto"></audio>
+
+        <div class="hud score-block">
+          <div class="label">SCORE</div>
+          <div class="value" id="scoreVal">0</div>
+          <div class="best">BEST <span id="bestVal">0</span></div>
+        </div>
+        <div class="hud next-block">
+          <span class="label">NEXT</span>
+          <span class="next-piece-badge" id="nextBadge">?</span>
+        </div>
+
+        <div class="overflow-screen" id="overflowScreen">
+          <h2>DISH OVERFLOW</h2>
+          <p id="overflowScore"></p>
+          <p id="overflowRankMsg"></p>
+          <button id="overflowResetBtn" style="font-family:'JetBrains Mono',monospace;background:transparent;border:1px solid var(--bp-accent);color:var(--bp-accent);padding:8px 16px;cursor:pointer;letter-spacing:1px;">TRY AGAIN</button>
+        </div>
+
+        <div class="rules-panel" id="rulesPanel">
+          <div class="rules-card">
+            <h2>HOW IT WORKS <button id="closeRulesBtn">✕</button></h2>
+            <div id="rulesContent"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="palette" id="palette"></div>
+    </div>
+
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-title">INTERACTIONS <button id="closeSidebarBtn" style="background:transparent;border:none;color:var(--bp-text-dim);font-size:16px;cursor:pointer;line-height:1;">✕</button></div>
+      <div id="sidebarContent"></div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/matter.min.js"></script>
+<script>
+/* =========================================================
+   CHEMISTRY DATA LAYER (same rules as chemistry-data.js,
+   inlined here for a single-file browser prototype)
+   ========================================================= */
+// Molecules/reactions can be fully implemented but held back from players
+// until a planned reveal — flip the relevant flag to true to switch it on,
+// nothing else needs to change.
+const FEATURE_FLAGS = {
+  formaldehyde: false,
+};
+
+const ELEMENTS = {
+  H:  { name: "Hydrogen", valence: 1, mass: 1,  color: "#F2F7FB", stroke: "#BFE3FF" },
+  O:  { name: "Oxygen",   valence: 2, mass: 16, color: "#FF6B5C", stroke: "#FFD1CB" },
+  C:  { name: "Carbon",   valence: 4, mass: 12, color: "#D8C79A", stroke: "#3A3226" },
+  N:  { name: "Nitrogen", valence: 3, mass: 14, color: "#7FB2FF", stroke: "#0B3D66" },
+  Cl: { name: "Chlorine", valence: 1, mass: 35, color: "#8FE3A0", stroke: "#0B3D66" },
+  Na: { name: "Sodium",   valence: 1, mass: 23, color: "#C79CFF", stroke: "#0B3D66" },
+};
+
+// Only pairs that actually appear together in at least one MOLECULES recipe
+// are allowed to bond. C-N and C-C are chemically valid in the real world,
+// but neither combination matches any molecule this game currently knows —
+// allowing them meant C and N (or two C's) could bond, then keep pulling in
+// more atoms, and never be able to lock into anything: a permanently stuck
+// cluster with no possible resolution. If a future organic-chemistry tier
+// adds recipes that use C-N or C-C (e.g. HCN, C2H6), add the pair back here
+// AND add the matching molecule(s) to MOLECULES at the same time.
+const COVALENT_PARTNERS = {
+  H:  ["H", "O", "C", "N", "Cl"],
+  O:  ["H", "O", "C"],
+  C:  ["H", "O"],
+  N:  ["H", "N"],
+  Cl: ["H", "Cl"],
+};
+const IONIC_PAIRS = [["Na", "Cl"]];
+
+function canBond(symA, symB) {
+  const a = ELEMENTS[symA], b = ELEMENTS[symB];
+  if (!a || !b) return false;
+  const ionicMatch = IONIC_PAIRS.some(([x,y]) => (x===symA&&y===symB)||(x===symB&&y===symA));
+  if (ionicMatch) return true;
+  return (COVALENT_PARTNERS[symA]||[]).includes(symB) && (COVALENT_PARTNERS[symB]||[]).includes(symA);
+}
+
+// How many valence units a single bond between two elements consumes on each
+// side (1 = single bond, 2 = double, 3 = triple). Needed because some pairs
+// (O=O, N#N, C=O) use more than one bond unit per pairing — without this,
+// those atoms bond but are left with unspent valence and never saturate.
+// Unlisted pairs default to a single bond.
+const BOND_ORDER_TABLE = [
+  ["H","H",1], ["H","O",1], ["H","C",1], ["H","N",1], ["H","Cl",1],
+  ["O","O",2], ["O","C",2],
+  ["N","N",3],
+  ["Cl","Cl",1],
+  ["Na","Cl",1],
+];
+const BOND_ORDER_MAP = {};
+for (const [a,b,order] of BOND_ORDER_TABLE){
+  const key = a < b ? `${a}-${b}` : `${b}-${a}`;
+  BOND_ORDER_MAP[key] = order;
+}
+function bondOrderFor(symA, symB){
+  const key = symA < symB ? `${symA}-${symB}` : `${symB}-${symA}`;
+  return BOND_ORDER_MAP[key] || 1;
+}
+
+const MOLECULES = {
+  H2:   { formula:{H:2}, name:"Hydrogen gas",  tier:1, points:10, color:"#EAF4FF" },
+  O2:   { formula:{O:2}, name:"Oxygen gas",    tier:1, points:10, color:"#FF8A7A" },
+  N2:   { formula:{N:2}, name:"Nitrogen gas",  tier:1, points:10, color:"#9AC4FF" },
+  Cl2:  { formula:{Cl:2}, name:"Chlorine gas", tier:1, points:12, color:"#A8ECB4" },
+  HCl:  { formula:{H:1,Cl:1}, name:"Hydrogen chloride", tier:1, points:15, color:"#D7F5DC" },
+  H2O:  { formula:{H:2,O:1}, name:"Water",           tier:2, points:25, color:"#5FB4FF" },
+  CO2:  { formula:{C:1,O:2}, name:"Carbon dioxide",  tier:2, points:25, color:"#B9B0A0" },
+  NH3:  { formula:{N:1,H:3}, name:"Ammonia",         tier:2, points:30, color:"#8FC3FF" },
+  CH4:  { formula:{C:1,H:4}, name:"Methane",         tier:2, points:30, color:"#9A8F73" },
+  NaCl: { formula:{Na:1,Cl:1}, name:"Table salt",    tier:2, points:20, color:"#EDEBFF" },
+  NaOH: { formula:{Na:1,O:1,H:1}, name:"Sodium hydroxide", tier:2, points:28, color:"#EEE3FF", reactionOnly:true },
+  CH2O: { formula:{C:1,H:2,O:1}, name:"Formaldehyde",     tier:2, points:32, color:"#FFE39E" },
+};
+
+function countAtoms(symbols){ const c={}; for(const s of symbols) c[s]=(c[s]||0)+1; return c; }
+function formulaMatches(counts, formula){
+  const kA = Object.keys(counts), kB = Object.keys(formula);
+  if (kA.length !== kB.length) return false;
+  return kA.every(k => counts[k] === formula[k]);
+}
+// Returns the leftover valence for each atom in the cluster after every bond
+// in bondPairs is subtracted. Shared by tryFormMolecule (does this cluster
+// match a known recipe?) and isClusterSaturated (has this cluster run out of
+// room to grow, whether or not it matches anything?).
+function openBondsFor(symbols, bondPairs){
+  const openBonds = symbols.map(s => ELEMENTS[s].valence);
+  for (const [i,j] of bondPairs){
+    const order = bondOrderFor(symbols[i], symbols[j]);
+    openBonds[i] -= order;
+    openBonds[j] -= order;
+  }
+  return openBonds;
+}
+// All molecule formulas currently reachable by direct atom merging — i.e.
+// not reaction-only (NaOH only forms via the Na+HCl->...->NaOH reaction
+// chain, never by atoms bonding directly) and not behind a disabled
+// feature flag. Recomputed on demand rather than cached, since flipping a
+// feature flag mid-session should immediately change what counts.
+function activeMergeableFormulas(){
+  return Object.entries(MOLECULES)
+    .filter(([id, mol]) => !mol.reactionOnly && (id !== 'CH2O' || FEATURE_FLAGS.formaldehyde))
+    .map(([, mol]) => mol.formula);
+}
+
+// True if this cluster's current atom counts could still, by only ADDING
+// more atoms (never removing any), grow into a formula that matches some
+// active molecule. Atoms only ever get added to a cluster, so once this
+// returns false it can never become true again for the same cluster —
+// makes it safe to mark dead-end permanently the moment it fails, well
+// before the cluster is fully saturated. E.g. C+O+H together can never
+// resolve while formaldehyde is disabled: no active formula contains all
+// three elements, so the cluster is doomed regardless of C's remaining
+// open valence.
+function clusterCanStillResolve(symbols){
+  const counts = countAtoms(symbols);
+  return activeMergeableFormulas().some(f => {
+    for (const el in counts){
+      if (!(el in f) || counts[el] > f[el]) return false;
+    }
+    return true;
+  });
+}
+
+function isClusterSaturated(symbols, bondPairs){
+  return openBondsFor(symbols, bondPairs).every(b => b === 0);
+}
+function tryFormMolecule(symbols, bondPairs){
+  if (!isClusterSaturated(symbols, bondPairs)) return null;
+  const counts = countAtoms(symbols);
+  for (const [id, mol] of Object.entries(MOLECULES)){
+    if (id === 'CH2O' && !FEATURE_FLAGS.formaldehyde) continue;
+    if (formulaMatches(counts, mol.formula)) return { id, ...mol };
+  }
+  return null;
+}
+
+const REACTIONS = [
+  { reactants:["CH4","O2"], products:["CO2","H2O","H2O"], name:"Combustion (methane)", energy:60 },
+  { reactants:["Na","HCl"], products:["NaCl","H"], name:"Sodium + hydrochloric acid", energy:20 },
+  { reactants:["Na","H2O"], products:["NaOH","H"], name:"Sodium + water", energy:22 },
+  { reactants:["HCl","NaOH"], products:["NaCl","H2O"], name:"Neutralization", energy:26 },
+  { reactants:["H2","O"], products:["H2O"], name:"Hydrogen + oxygen", energy:18 },
+];
+function tryReact(idA, idB){
+  for (const r of REACTIONS){
+    const [a,b] = r.reactants;
+    if ((a===idA&&b===idB)||(a===idB&&b===idA)) return r;
+  }
+  return null;
+}
+
+/* =========================================================
+   MATTER.JS SETUP
+   ========================================================= */
+const { Engine, World, Bodies, Body, Composite, Events, Vector, Constraint } = Matter;
+
+const engine = Engine.create();
+engine.gravity.y = 0.9;
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const bgCanvas = document.getElementById('bg');
+const bgCtx = bgCanvas.getContext('2d');
+
+const W = 700, H = 820;
+const dishCenter = { x: W/2, y: 420 };
+const dishRadius = 300;
+const gapHalfDeg = 44; // opening at top for dropping pieces (widened further per feedback)
+
+// The drop-zone the player can aim into must stay INSIDE the physical gap in the
+// rim, minus room for the widest atom's radius, or dropped atoms clip the rim
+// right at the lip and can bounce out sideways instead of falling in.
+const maxAtomRadius = Math.max(...Object.keys(ELEMENTS).map(radiusFor));
+const dropHalfWidth = Math.max(30, dishRadius * Math.sin(gapHalfDeg*Math.PI/180) - maxAtomRadius - 6);
+
+function resizeBg(){
+  bgCanvas.width = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+  drawBlueprintGrid();
+}
+window.addEventListener('resize', resizeBg);
+
+function drawBlueprintGrid(){
+  const w = bgCanvas.width, h = bgCanvas.height;
+  bgCtx.fillStyle = '#0B3D66';
+  bgCtx.fillRect(0,0,w,h);
+  bgCtx.strokeStyle = 'rgba(191,227,255,0.06)';
+  bgCtx.lineWidth = 1;
+  const step = 40;
+  for (let x=0; x<w; x+=step){ bgCtx.beginPath(); bgCtx.moveTo(x,0); bgCtx.lineTo(x,h); bgCtx.stroke(); }
+  for (let y=0; y<h; y+=step){ bgCtx.beginPath(); bgCtx.moveTo(0,y); bgCtx.lineTo(w,y); bgCtx.stroke(); }
+  bgCtx.strokeStyle = 'rgba(191,227,255,0.11)';
+  const bigStep = 200;
+  for (let x=0; x<w; x+=bigStep){ bgCtx.beginPath(); bgCtx.moveTo(x,0); bgCtx.lineTo(x,h); bgCtx.stroke(); }
+  for (let y=0; y<h; y+=bigStep){ bgCtx.beginPath(); bgCtx.moveTo(0,y); bgCtx.lineTo(w,y); bgCtx.stroke(); }
+}
+resizeBg();
+
+// --- Build circular dish walls (segments), leaving a gap at top ---
+const wallBodies = [];
+(function buildDishWalls(){
+  const segCount = 44;
+  const gapRad = gapHalfDeg * Math.PI/180;
+  const startAngle = -Math.PI/2 + gapRad;      // just past top-gap, going clockwise
+  const endAngle = Math.PI*1.5 - gapRad;        // back around to the other side of gap
+  const totalSweep = endAngle - startAngle;
+  const segAngle = totalSweep / segCount;
+  const segLen = (dishRadius * segAngle) * 1.15;
+
+  for (let i=0; i<=segCount; i++){
+    const a = startAngle + i*segAngle;
+    const x = dishCenter.x + Math.cos(a) * (dishRadius+4);
+    const y = dishCenter.y + Math.sin(a) * (dishRadius+4);
+    const wall = Bodies.rectangle(x, y, segLen, 10, {
+      isStatic:true,
+      angle: a + Math.PI/2,
+      friction:0.05,
+      restitution:0.15,
+      render:{visible:false}
+    });
+    wallBodies.push(wall);
+  }
+  World.add(engine.world, wallBodies);
+})();
+
+/* =========================================================
+   GAME STATE
+   ========================================================= */
+let atomRegistry = new Map();   // bodyId -> {symbol, body, bonds:Set(bodyId), valenceUsed}
+let moleculeRegistry = new Map(); // bodyId -> {moleculeId, body}
+let bondConstraints = new Map();  // "idA-idB" -> constraint
+let effects = [];  // transient floating text / burst rings
+let score = 0;
+let gameOver = false;
+let discovered = new Set();
+
+// --- high score (persists locally per-mode, in this browser only) ---
+const HIGH_SCORE_KEY = 'genso_highscore_lab';
+let bestScore = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0', 10) || 0;
+
+// ===== HIGH SCORES (daily + all-time top 5) =====
+// A separate, richer system from the single bestScore above — this tracks
+// the top 5 runs, split by calendar day and all-time, for the splash
+// screen's High Scores view. Each entry is {score, ts}; ties are broken by
+// timestamp ascending, so the run that hit that score first ranks higher.
+const SCORES_ALLTIME_KEY = 'genso_scores_alltime_lab';
+const SCORES_DAILY_KEY = 'genso_scores_daily_lab';
+
+function todayKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function loadAlltimeScores(){
+  try { return JSON.parse(localStorage.getItem(SCORES_ALLTIME_KEY)) || []; }
+  catch { return []; }
+}
+function loadDailyScores(){
+  try {
+    const rec = JSON.parse(localStorage.getItem(SCORES_DAILY_KEY));
+    if (rec && rec.date === todayKey()) return rec.entries || [];
+    return []; // no record yet, or it's a new day
+  } catch { return []; }
+}
+function saveAlltimeScores(list){ localStorage.setItem(SCORES_ALLTIME_KEY, JSON.stringify(list)); }
+function saveDailyScores(list){ localStorage.setItem(SCORES_DAILY_KEY, JSON.stringify({ date: todayKey(), entries: list })); }
+
+// Inserts {score, ts} into a top-5 list (score desc, ties broken oldest-first),
+// trims to 5, and reports whether this particular run made the cut.
+function insertScore(list, scoreVal, ts){
+  const merged = [...list, { score: scoreVal, ts }];
+  merged.sort((a,b) => b.score - a.score || a.ts - b.ts);
+  const trimmed = merged.slice(0,5);
+  return { list: trimmed, madeTop5: trimmed.some(e => e.ts === ts) };
+}
+function recordFinishedRun(finalScore){
+  const ts = Date.now();
+  const alltime = insertScore(loadAlltimeScores(), finalScore, ts);
+  saveAlltimeScores(alltime.list);
+  const daily = insertScore(loadDailyScores(), finalScore, ts);
+  saveDailyScores(daily.list);
+  return { madeAlltimeTop5: alltime.madeTop5, madeDailyTop5: daily.madeTop5 };
+}
+let beatBestThisRun = false;
+function updateBestDisplay(){ document.getElementById('bestVal').textContent = bestScore; }
+updateBestDisplay();
+
+// --- completion bonus: awarded once per run for discovering all 10 molecules ---
+const TOTAL_MOLECULES = Object.keys(MOLECULES).filter(id => id !== 'CH2O' || FEATURE_FLAGS.formaldehyde).length;
+let completionBonusAwarded = false;
+
+const elementKeys = Object.keys(ELEMENTS);
+let selectedElement = 'H';
+let dropX = W/2;
+
+function radiusFor(symbol){
+  return 20 + Math.sqrt(ELEMENTS[symbol].mass) * 3.4;
+}
+function radiusForMolecule(tier){
+  return 28 + tier * 12;
+}
+
+function spawnAtom(symbol, x, y, entered=false){
+  const r = radiusFor(symbol);
+  const body = Bodies.circle(x, y, r, {
+    restitution:0.25, friction:0.15, density:0.0018,
+    label:'atom'
+  });
+  atomRegistry.set(body.id, { symbol, body, bonds:new Set(), valenceUsed:0, spawnedAt:Date.now(), deadEnd:false, entered });
+  World.add(engine.world, body);
+  return body;
+}
+
+function spawnMolecule(moleculeId, x, y, vx=0, vy=0, spawnedAt=Date.now(), entered=true){
+  const mol = MOLECULES[moleculeId];
+  const r = radiusForMolecule(mol.tier);
+  const body = Bodies.circle(x, y, r, {
+    restitution:0.3, friction:0.12, density:0.002,
+    label:'molecule'
+  });
+  Body.setVelocity(body, {x:vx, y:vy});
+  moleculeRegistry.set(body.id, { moleculeId, body, spawnedAt, entered });
+  World.add(engine.world, body);
+  if (!discovered.has(moleculeId)){
+    discovered.add(moleculeId);
+    markSidebarDiscovered(moleculeId);
+    if (!completionBonusAwarded && discovered.size === TOTAL_MOLECULES){
+      completionBonusAwarded = true;
+      addScore(200, x, y, 'ALL MOLECULES!', 'huge', 0.6);
+      markSidebarBonus();
+      burst(x, y, '#FFC145');
+    }
+  }
+  return body;
+}
+
+function addScore(n, x, y, label, size, delay){
+  score += n;
+  document.getElementById('scoreVal').textContent = score;
+  effects.push({ type:'text', x, y, text:`+${n} ${label||''}`, life:1.0, size: size || 'normal', delay: delay || 0 });
+  if (score > bestScore){
+    bestScore = score;
+    localStorage.setItem(HIGH_SCORE_KEY, String(bestScore));
+    updateBestDisplay();
+    beatBestThisRun = true;
+  }
+}
+
+function burst(x,y,color){
+  effects.push({ type:'burst', x, y, color, life:1.0 });
+}
+
+function clusterAt(startId){
+  const visited = new Set([startId]);
+  const queue = [startId];
+  while(queue.length){
+    const cur = queue.shift();
+    const entry = atomRegistry.get(cur);
+    if (!entry) continue;
+    for (const nb of entry.bonds){
+      if (!visited.has(nb)){ visited.add(nb); queue.push(nb); }
+    }
+  }
+  return Array.from(visited);
+}
+
+function tryLockCluster(clusterIds){
+  // build symbols + local bond index pairs
+  const idList = clusterIds;
+  const symbols = idList.map(id => atomRegistry.get(id).symbol);
+  const indexOf = new Map(idList.map((id,i)=>[id,i]));
+  const bondPairSet = new Set();
+  const bondPairs = [];
+  for (const id of idList){
+    const entry = atomRegistry.get(id);
+    for (const nb of entry.bonds){
+      if (!indexOf.has(nb)) continue;
+      const i = indexOf.get(id), j = indexOf.get(nb);
+      const key = i<j ? `${i}-${j}` : `${j}-${i}`;
+      if (!bondPairSet.has(key)){ bondPairSet.add(key); bondPairs.push(i<j?[i,j]:[j,i]); }
+    }
+  }
+  const match = tryFormMolecule(symbols, bondPairs);
+  if (!match) {
+    const saturated = isClusterSaturated(symbols, bondPairs);
+    // Two distinct dead-end cases, same grey treatment:
+    //  1. Fully saturated (no atom has any open valence left) but the
+    //     resulting formula doesn't match any known molecule.
+    //  2. NOT yet saturated, but the formula can already never grow into
+    //     any active molecule's formula (see clusterCanStillResolve) —
+    //     e.g. C+O+H with formaldehyde disabled. This one still has open
+    //     valence slots, which stay visible (hollow dots) so the grey
+    //     reads as "dead end, but atoms can still attach" rather than
+    //     "fully locked" — same warning color, different completeness.
+    if (saturated || !clusterCanStillResolve(symbols)){
+      for (const id of idList){
+        const entry = atomRegistry.get(id);
+        if (entry) entry.deadEnd = true;
+      }
+    }
+    return;
+  }
+
+  // centroid
+  let cx=0, cy=0, minSpawnedAt=Infinity;
+  for (const id of idList){
+    const b = atomRegistry.get(id).body;
+    cx += b.position.x; cy += b.position.y;
+    minSpawnedAt = Math.min(minSpawnedAt, atomRegistry.get(id).spawnedAt);
+  }
+  cx/=idList.length; cy/=idList.length;
+
+  // remove cluster bodies + constraints
+  for (const id of idList){
+    const entry = atomRegistry.get(id);
+    World.remove(engine.world, entry.body);
+    for (const nb of entry.bonds){
+      const key = id<nb ? `${id}-${nb}` : `${nb}-${id}`;
+      const c = bondConstraints.get(key);
+      if (c){ World.remove(engine.world, c); bondConstraints.delete(key); }
+    }
+    atomRegistry.delete(id);
+  }
+
+  const newBody = spawnMolecule(match.id, cx, cy, 0, 0, minSpawnedAt);
+  addScore(match.points, cx, cy, match.name, 'big');
+  burst(cx, cy, match.color);
+}
+
+/* =========================================================
+   SIDEBAR — always-visible interaction reference, generated
+   straight from the data tables so new elements/molecules/
+   reactions show up automatically.
+   ========================================================= */
+function formulaText(formula){
+  return Object.entries(formula).map(([s,n])=>`${s}${n>1?n:''}`).join('');
+}
+function atomsText(formula){
+  return Object.entries(formula).flatMap(([s,n]) => Array(n).fill(s)).join('+');
+}
+function buildSidebarContent(){
+  const bondRows = Object.entries(MOLECULES).filter(([id,m]) => !m.reactionOnly && (id !== 'CH2O' || FEATURE_FLAGS.formaldehyde)).map(([id,m]) =>
+    `<div class="interaction-row" id="sb-mol-${id}">
+       <span class="formula">${atomsText(m.formula)} → ${id}</span>
+       <span class="pts">+${m.points}</span>
+     </div>`).join('');
+
+  const reactionRows = REACTIONS.map((r,i) =>
+    `<div class="interaction-row" id="sb-rxn-${i}">
+       <span class="formula">${r.reactants.join('+')} → ${r.products.join('+')}</span>
+       <span class="pts">+${r.energy}</span>
+     </div>`).join('');
+
+  document.getElementById('sidebarContent').innerHTML = `
+    <div class="sidebar-group">BOND → MOLECULE</div>
+    ${bondRows}
+    <div class="sidebar-group">MOLECULE + MOLECULE</div>
+    ${reactionRows}
+    <div class="sidebar-group">BONUS</div>
+    <div class="interaction-row" id="sb-bonus-all">
+       <span class="formula">Discover every molecule</span>
+       <span class="pts">+200</span>
+     </div>
+  `;
+}
+function markSidebarDiscovered(moleculeId){
+  const row = document.getElementById(`sb-mol-${moleculeId}`);
+  if (row) row.classList.add('seen');
+}
+function markSidebarReaction(index){
+  const row = document.getElementById(`sb-rxn-${index}`);
+  if (row) row.classList.add('seen');
+}
+function markSidebarBonus(){
+  const row = document.getElementById('sb-bonus-all');
+  if (row) row.classList.add('seen');
+}
+
+/* --- Collision handling ---
+   Both collisionStart AND collisionActive run the same check. Matter only fires
+   collisionStart at the exact instant two bodies first touch; in a crowded dish,
+   pieces are often gradually nudged into resting contact by their neighbors
+   without a fresh discrete impact, so collisionStart alone misses them. The
+   logic below is idempotent (bonds/reactions already applied are skipped), so
+   re-running it every tick for active pairs is safe. */
+// A piece is only eligible to bond/react once it's actually landed —
+// otherwise two pieces falling side-by-side through the drop chute (before
+// either has touched anything) could bond/react in mid-air. "Landed" means
+// it has touched the dish wall (handled in handleCollisionEvent above) or
+// another piece that has itself already landed — contact with an entered
+// piece propagates entry, since resting on top of the pile is landing too,
+// no matter how tall the pile has grown.
+function handleCollisionPair(A, B){
+  const ea0 = atomRegistry.get(A.id) || moleculeRegistry.get(A.id);
+  const eb0 = atomRegistry.get(B.id) || moleculeRegistry.get(B.id);
+  if (!ea0 || !eb0) return;
+  if (ea0.entered || eb0.entered) { ea0.entered = true; eb0.entered = true; }
+  if (!ea0.entered || !eb0.entered) return;
+  // atom + atom -> possible bond
+  if (atomRegistry.has(A.id) && atomRegistry.has(B.id)){
+    const ea = atomRegistry.get(A.id), eb = atomRegistry.get(B.id);
+    if (ea.bonds.has(B.id)) return; // already bonded
+    if (ea.valenceUsed >= ELEMENTS[ea.symbol].valence) return;
+    if (eb.valenceUsed >= ELEMENTS[eb.symbol].valence) return;
+    if (!canBond(ea.symbol, eb.symbol)) return;
+
+    ea.bonds.add(B.id); eb.bonds.add(A.id);
+    const remainA = ELEMENTS[ea.symbol].valence - ea.valenceUsed;
+    const remainB = ELEMENTS[eb.symbol].valence - eb.valenceUsed;
+    const order = Math.min(bondOrderFor(ea.symbol, eb.symbol), remainA, remainB);
+    ea.valenceUsed += order; eb.valenceUsed += order;
+
+    const dist = Vector.magnitude(Vector.sub(A.position,B.position));
+    const c = Constraint.create({
+      bodyA:A, bodyB:B, length: dist*0.82, stiffness:0.35, damping:0.15,
+      render:{visible:false}
+    });
+    const key = A.id<B.id ? `${A.id}-${B.id}` : `${B.id}-${A.id}`;
+    bondConstraints.set(key, c);
+    World.add(engine.world, c);
+
+    const cluster = clusterAt(A.id);
+    tryLockCluster(cluster);
+    return;
+  }
+
+  // atom + molecule -> possible single-displacement reaction (e.g. Na + HCl -> NaCl + H)
+  // Only a free, unbonded atom reacts this way — one that hasn't already
+  // locked into a covalent cluster with something else.
+  if ((atomRegistry.has(A.id) && moleculeRegistry.has(B.id)) ||
+      (atomRegistry.has(B.id) && moleculeRegistry.has(A.id))){
+    const atomBody = atomRegistry.has(A.id) ? A : B;
+    const molBody  = atomRegistry.has(A.id) ? B : A;
+    const ea = atomRegistry.get(atomBody.id);
+    const mb = moleculeRegistry.get(molBody.id);
+    if (ea.bonds.size > 0) return; // already part of a cluster, not a free atom
+    const rxn = tryReact(ea.symbol, mb.moleculeId);
+    if (!rxn) return;
+
+    const cx = (atomBody.position.x+molBody.position.x)/2, cy=(atomBody.position.y+molBody.position.y)/2;
+    World.remove(engine.world, atomBody); World.remove(engine.world, molBody);
+    atomRegistry.delete(atomBody.id); moleculeRegistry.delete(molBody.id);
+
+    markSidebarReaction(REACTIONS.indexOf(rxn));
+    spawnReactionProducts(rxn, cx, cy);
+    addScore(rxn.energy, cx, cy, rxn.name);
+    burst(cx, cy, '#FFC145');
+    return;
+  }
+
+  // molecule + molecule -> possible reaction
+  if (moleculeRegistry.has(A.id) && moleculeRegistry.has(B.id)){
+    const ma = moleculeRegistry.get(A.id), mb = moleculeRegistry.get(B.id);
+    const rxn = tryReact(ma.moleculeId, mb.moleculeId);
+    if (!rxn) return;
+
+    const cx = (A.position.x+B.position.x)/2, cy=(A.position.y+B.position.y)/2;
+    World.remove(engine.world, A); World.remove(engine.world, B);
+    moleculeRegistry.delete(A.id); moleculeRegistry.delete(B.id);
+
+    markSidebarReaction(REACTIONS.indexOf(rxn));
+    spawnReactionProducts(rxn, cx, cy);
+    addScore(rxn.energy, cx, cy, rxn.name);
+    burst(cx, cy, '#FFC145');
+  }
+}
+
+// Spawns each reaction product as the right kind of body — a MOLECULES entry
+// becomes a locked molecule, but a bare element symbol (e.g. the "H" freed by
+// Na+HCl->NaCl+H) becomes a normal free atom that can go on to bond again,
+// which is what lets these reactions chain into further merges.
+function spawnReactionProducts(rxn, cx, cy){
+  rxn.products.forEach((pid, i) => {
+    const angle = (Math.PI*2/rxn.products.length) * i;
+    const vx = Math.cos(angle)*3, vy = Math.sin(angle)*3 - 2;
+    if (MOLECULES[pid]) {
+      spawnMolecule(pid, cx + Math.cos(angle)*10, cy + Math.sin(angle)*10, vx, vy);
+    } else {
+      const b = spawnAtom(pid, cx + Math.cos(angle)*10, cy + Math.sin(angle)*10, true);
+      Body.setVelocity(b, {x:vx, y:vy});
+    }
+  });
+}
+
+function handleCollisionEvent(evt){
+  if (gameOver) return;
+  for (const pair of evt.pairs){
+    // A piece touching the dish wall (a static body) has definitely landed,
+    // regardless of distance from dishCenter — this matters once the pile
+    // is tall enough that "landing" can happen outside the usual radius.
+    if (pair.bodyA.isStatic || pair.bodyB.isStatic){
+      const entry = atomRegistry.get(pair.bodyA.isStatic ? pair.bodyB.id : pair.bodyA.id)
+                 || moleculeRegistry.get(pair.bodyA.isStatic ? pair.bodyB.id : pair.bodyA.id);
+      if (entry) entry.entered = true;
+    }
+    handleCollisionPair(pair.bodyA, pair.bodyB);
+  }
+}
+Events.on(engine, 'collisionStart', handleCollisionEvent);
+Events.on(engine, 'collisionActive', handleCollisionEvent);
+
+/* Belt-and-suspenders: also run a direct geometric proximity scan every physics
+   tick, independent of Matter's collision events entirely. Matter's collision
+   bookkeeping (start/active pairs) is timing- and order-sensitive internally —
+   in a dense pile it can end up not re-flagging a pair as "active" every tick
+   even while the two circles are still genuinely touching, so a piece can sit
+   in real contact with a valid partner and never get evaluated again. A plain
+   distance check has no such internal state to fall out of sync — if two
+   circles overlap right now, they get checked right now, every tick. */
+function proximityChemistryPass(){
+  if (gameOver) return;
+  const atoms = [...atomRegistry.values()];
+  for (let i=0; i<atoms.length; i++){
+    for (let j=i+1; j<atoms.length; j++){
+      const A = atoms[i].body, B = atoms[j].body;
+      const dx = A.position.x-B.position.x, dy = A.position.y-B.position.y;
+      const touchDist = (A.circleRadius||0) + (B.circleRadius||0) + 1.5; // small tolerance
+      if (dx*dx+dy*dy <= touchDist*touchDist) handleCollisionPair(A, B);
+    }
+  }
+  const mols = [...moleculeRegistry.values()];
+  for (let i=0; i<mols.length; i++){
+    for (let j=i+1; j<mols.length; j++){
+      const A = mols[i].body, B = mols[j].body;
+      const dx = A.position.x-B.position.x, dy = A.position.y-B.position.y;
+      const touchDist = (A.circleRadius||0) + (B.circleRadius||0) + 1.5;
+      if (dx*dx+dy*dy <= touchDist*touchDist) handleCollisionPair(A, B);
+    }
+  }
+}
+Events.on(engine, 'afterUpdate', proximityChemistryPass);
+
+/* =========================================================
+   INPUT
+   ========================================================= */
+const palette = document.getElementById('palette');
+elementKeys.forEach(sym => {
+  const el = ELEMENTS[sym];
+  const btn = document.createElement('button');
+  btn.className = 'elem-btn';
+  btn.dataset.sym = sym;
+  btn.innerHTML = `${sym}<span class="valence-tag">v${el.valence}</span>`;
+  btn.style.color = el.color;
+  palette.appendChild(btn);
+});
+
+/* Shuffle-bag randomizer: each cycle contains every element (weighted — see
+   DROP_WEIGHTS below), shuffled, drawn in order, refilled when empty. Gives
+   fair random distribution without the long streaks or gaps plain
+   Math.random() per-draw would produce, and removes the "just spam your
+   favorite combo" strategy since the player can plan one piece ahead (NEXT)
+   but not choose freely.
+   H is weighted higher than the rest: most molecules consume several H per
+   single heavier atom (H2O needs 2, NH3 needs 3, CH4 needs 4), so an equal
+   drop rate quietly makes H the bottleneck even though it "feels" as common
+   as everything else. */
+const DROP_WEIGHTS = { H:2, O:1, C:1, N:1, Cl:1, Na:1 };
+let bag = [];
+function refillBag(){
+  bag = [];
+  for (const sym of elementKeys){
+    const weight = DROP_WEIGHTS[sym] || 1;
+    for (let k=0; k<weight; k++) bag.push(sym);
+  }
+  for (let i = bag.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [bag[i],bag[j]] = [bag[j],bag[i]];
+  }
+}
+function drawFromBag(){
+  if (!bag.length) refillBag();
+  return bag.pop();
+}
+
+const nextBadge = document.getElementById('nextBadge');
+selectedElement = drawFromBag();
+let nextElement = drawFromBag();
+function updateQueueUI(){
+  document.querySelectorAll('.elem-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.sym === selectedElement);
+  });
+  const ne = ELEMENTS[nextElement];
+  nextBadge.textContent = nextElement;
+  nextBadge.style.color = ne.color;
+  nextBadge.style.borderColor = ne.color;
+}
+updateQueueUI();
+
+/* =========================================================
+   MUSIC — autoplay-with-sound is blocked until a real user
+   gesture, so playback kicks off on the first drop rather than
+   on page load. The mute button just toggles bgm.muted, which
+   keeps the loop running in sync instead of restarting it.
+   ========================================================= */
+const MUSIC_MUTED_KEY = 'genso_music_muted';
+const bgm = document.getElementById('bgm');
+const muteBtn = document.getElementById('muteBtn');
+let musicStarted = false;
+let musicMuted = localStorage.getItem(MUSIC_MUTED_KEY) === 'true';
+bgm.muted = musicMuted;
+muteBtn.textContent = musicMuted ? '♪ MUTED' : '♪ MUSIC';
+
+function startMusicIfNeeded() {
+  if (musicStarted) return;
+  musicStarted = true;
+  bgm.volume = 0.55;
+  bgm.play().catch(() => { musicStarted = false; }); // retry on next gesture if blocked
+}
+muteBtn.addEventListener('click', () => {
+  if (!musicStarted) { musicMuted = false; startMusicIfNeeded(); muteBtn.textContent = '♪ MUSIC'; localStorage.setItem(MUSIC_MUTED_KEY, 'false'); return; }
+  musicMuted = !musicMuted;
+  bgm.muted = musicMuted;
+  muteBtn.textContent = musicMuted ? '♪ MUTED' : '♪ MUSIC';
+  localStorage.setItem(MUSIC_MUTED_KEY, String(musicMuted));
+});
+
+function pointerToDropX(clientX){
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width; // canvas may be CSS-scaled smaller than its 700px internal buffer
+  const localX = (clientX - rect.left) * scaleX;
+  return Math.max(dishCenter.x-dropHalfWidth, Math.min(dishCenter.x+dropHalfWidth, localX));
+}
+
+canvas.addEventListener('pointermove', (e) => {
+  dropX = pointerToDropX(e.clientX);
+});
+const DROP_COOLDOWN_MS = 220; // minimum time between drops — stops rapid-tap spam
+let lastDropAt = 0;
+const CONTROL_MODE_KEY = 'genso_control_mode'; // 'tap' | 'drag'
+const controlMode = localStorage.getItem(CONTROL_MODE_KEY) || 'tap';
+let dragging = false;
+
+function commitDrop(){
+  const nowTs = Date.now();
+  if (nowTs - lastDropAt < DROP_COOLDOWN_MS) return;
+  lastDropAt = nowTs;
+  if (!musicMuted) startMusicIfNeeded();
+  spawnAtom(selectedElement, dropX, dishCenter.y - dishRadius - 40);
+  selectedElement = nextElement;
+  nextElement = drawFromBag();
+  updateQueueUI();
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (!e.isPrimary) return; // ignore extra simultaneous touches (multi-touch)
+  if (gameOver) return;
+  e.preventDefault();
+  dropX = pointerToDropX(e.clientX);
+  if (controlMode === 'drag'){
+    dragging = true; // wait for release before actually dropping
+  } else {
+    commitDrop();
+  }
+});
+canvas.addEventListener('pointerup', (e) => {
+  if (controlMode !== 'drag' || !dragging) return;
+  dragging = false;
+  dropX = pointerToDropX(e.clientX);
+  commitDrop();
+});
+canvas.addEventListener('pointercancel', () => { dragging = false; });
+
+document.getElementById('resetBtn').addEventListener('click', resetGame);
+document.getElementById('overflowResetBtn').addEventListener('click', resetGame);
+
+/* =========================================================
+   RULES PANEL — generated straight from the data tables above,
+   so adding an element/molecule/reaction updates this for free.
+   ========================================================= */
+function buildRulesContent(){
+  const el = document.getElementById('rulesContent');
+
+  const elementRows = Object.entries(ELEMENTS).map(([sym,e]) =>
+    `<tr><td>${sym}</td><td>${e.name}</td><td>${e.valence}</td></tr>`).join('');
+
+  const moleculeRows = Object.entries(MOLECULES).map(([id,m]) => {
+    const formula = Object.entries(m.formula).map(([s,n])=>`${s}${n>1?n:''}`).join('');
+    return `<tr><td>${formula}</td><td>${m.name}</td><td>${m.points}</td></tr>`;
+  }).join('');
+
+  const reactionRows = REACTIONS.map(r =>
+    `<li>${r.reactants.join(' + ')} → ${r.products.join(' + ')} (${r.name}, +${r.energy})</li>`).join('');
+
+  el.innerHTML = `
+    <p>The atom you're about to drop is highlighted below, with the one after
+    that shown in the NEXT badge — the sequence is randomized (drawn from a
+    shuffled bag, so it stays fair over time) rather than freely chosen, so
+    you have to adapt instead of just repeating one favorite combo.</p>
+    <p>Drop atoms into the dish. Two atoms bond on contact if they both still have
+    free valence <em>and</em> are chemically compatible partners — matching real
+    covalent/ionic bonding rules, not just matching colors.</p>
+    <p>Once every atom in a connected cluster has used up all its valence
+    (fully saturated), the cluster locks together and becomes a molecule if the
+    atom counts match a known compound.</p>
+    <p>Molecules can then collide with each other — if their combination matches a
+    known reaction, they're consumed and replaced by the reaction's products.</p>
+
+    <h3>ELEMENTS &amp; VALENCE</h3>
+    <table class="rules-table">
+      <tr><th>Sym</th><th>Name</th><th>Valence</th></tr>
+      ${elementRows}
+    </table>
+
+    <h3>KNOWN MOLECULES</h3>
+    <table class="rules-table">
+      <tr><th>Formula</th><th>Name</th><th>Points</th></tr>
+      ${moleculeRows}
+    </table>
+
+    <h3>KNOWN REACTIONS</h3>
+    <ul>${reactionRows}</ul>
+
+    <h3>DEAD ENDS</h3>
+    <p>Sometimes a cluster turns grey instead of locking into a molecule. That means
+    it's a dead end — the atoms bonded together in a way that can never resolve into
+    any of the molecules above, so nothing more will happen with that cluster.
+    This can show up two ways: the cluster may already be fully bonded (no atom has
+    any open valence left), or it may still show open (hollow) valence dots — meaning
+    atoms could still attach to it, but the combination is already unrecoverable
+    either way. A grey cluster won't score, so keep an eye on your combos and try to
+    avoid building one in the first place — a dish full of grey is usually the reason
+    a run isn't scoring.</p>
+
+    <h3>OVERFLOW</h3>
+    <p>The dashed amber "fill line" near the top of the dish is the limit — if any
+    piece comes to rest above that line, the dish has overflowed and the run ends.
+    Keep clusters compact and reacting them away to stay under the line.</p>
+  `;
+}
+buildRulesContent();
+buildSidebarContent();
+
+const rulesPanel = document.getElementById('rulesPanel');
+document.getElementById('rulesBtn').addEventListener('click', () => rulesPanel.classList.add('show'));
+document.getElementById('closeRulesBtn').addEventListener('click', () => rulesPanel.classList.remove('show'));
+
+const sidebarEl = document.getElementById('sidebar');
+const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+function openSidebar(){ sidebarEl.classList.add('open'); sidebarBackdrop.classList.add('open'); }
+function closeSidebar(){ sidebarEl.classList.remove('open'); sidebarBackdrop.classList.remove('open'); }
+document.getElementById('combosBtn').addEventListener('click', () => {
+  sidebarEl.classList.contains('open') ? closeSidebar() : openSidebar();
+});
+document.getElementById('closeSidebarBtn').addEventListener('click', closeSidebar);
+sidebarBackdrop.addEventListener('click', closeSidebar);
+rulesPanel.addEventListener('click', (e) => { if (e.target === rulesPanel) rulesPanel.classList.remove('show'); });
+
+function resetGame(){
+  for (const {body} of atomRegistry.values()) World.remove(engine.world, body);
+  for (const {body} of moleculeRegistry.values()) World.remove(engine.world, body);
+  for (const c of bondConstraints.values()) World.remove(engine.world, c);
+  atomRegistry.clear(); moleculeRegistry.clear(); bondConstraints.clear();
+  score = 0; document.getElementById('scoreVal').textContent = '0';
+  discovered.clear();
+  completionBonusAwarded = false;
+  beatBestThisRun = false;
+  document.querySelectorAll('.interaction-row.seen').forEach(el => el.classList.remove('seen'));
+  gameOver = false;
+  document.getElementById('overflowScreen').classList.remove('show');
+  document.getElementById('overflowRankMsg').textContent = '';
+  aboveLineSince.clear();
+  bag = [];
+  selectedElement = drawFromBag();
+  nextElement = drawFromBag();
+  updateQueueUI();
+}
+
+/* =========================================================
+   OVERFLOW CHECK
+   ========================================================= */
+const overflowY = dishCenter.y - dishRadius + 70;
+const OVERFLOW_GRACE_MS = 1200; // ignore freshly-dropped pieces still falling in from the chute
+// A near-zero-speed check used to decide when a piece had "come to rest" above
+// the fill line, but a piece never truly sits still while new drops keep
+// jostling the pile — so during a rapid-tap spam burst the dish could
+// visibly overflow and the run just wouldn't end. Tracking how long each
+// piece has continuously stayed above the line (regardless of how much it's
+// being jostled) catches that case, while still giving a piece that merely
+// bounces across the line for an instant a pass.
+const OVERFLOW_SUSTAIN_MS = 500;
+const aboveLineSince = new Map(); // bodyId -> timestamp first seen above the line, this stretch
+setInterval(() => {
+  if (gameOver) return;
+  const allBodies = [...atomRegistry.values(), ...moleculeRegistry.values()];
+  const now = Date.now();
+  const stillAbove = new Set();
+  for (const entry of allBodies){
+    if (now - entry.spawnedAt < OVERFLOW_GRACE_MS) continue;
+    const b = entry.body;
+    const dx = b.position.x - dishCenter.x, dy = b.position.y - dishCenter.y;
+    if (Math.hypot(dx, dy) > dishRadius + 10) continue; // not actually inside the dish yet
+    if (b.position.y >= overflowY) continue; // below the fill line — fine
+
+    stillAbove.add(b.id);
+    const firstSeen = aboveLineSince.get(b.id);
+    if (firstSeen === undefined){
+      aboveLineSince.set(b.id, now);
+    } else if (now - firstSeen >= OVERFLOW_SUSTAIN_MS){
+      gameOver = true;
+      document.getElementById('overflowScore').textContent = beatBestThisRun
+        ? `NEW BEST — ${score}`
+        : `FINAL SCORE: ${score}`;
+      const rank = recordFinishedRun(score);
+      document.getElementById('overflowRankMsg').textContent =
+        rank.madeAlltimeTop5 && rank.madeDailyTop5 ? "🏆 New All-Time AND Today's Top 5!" :
+        rank.madeAlltimeTop5 ? '🏆 New All-Time Top 5!' :
+        rank.madeDailyTop5 ? "⭐ Made Today's Top 5!" : '';
+      document.getElementById('overflowScreen').classList.add('show');
+      break;
+    }
+  }
+  // a piece that dropped back below the line (or was consumed by a merge)
+  // gets a clean slate if it ever ends up above the line again
+  for (const id of aboveLineSince.keys()){
+    if (!stillAbove.has(id)) aboveLineSince.delete(id);
+  }
+}, 200);
+
+/* =========================================================
+   RENDER — blueprint schematic dish + labeled pieces
+   ========================================================= */
+function drawDish(){
+  const {x,y} = dishCenter;
+  ctx.save();
+
+  // outer rim
+  ctx.strokeStyle = 'rgba(191,227,255,0.85)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  const gapRad = gapHalfDeg*Math.PI/180;
+  ctx.arc(x, y, dishRadius, -Math.PI/2+gapRad, Math.PI*1.5-gapRad);
+  ctx.stroke();
+
+  // inner rim (glass thickness)
+  ctx.strokeStyle = 'rgba(191,227,255,0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(x, y, dishRadius-10, -Math.PI/2+gapRad, Math.PI*1.5-gapRad);
+  ctx.stroke();
+
+  // tick marks
+  ctx.strokeStyle = 'rgba(191,227,255,0.45)';
+  ctx.lineWidth = 1;
+  for (let d=0; d<360; d+=15){
+    const a = d*Math.PI/180;
+    const inGap = (() => {
+      const norm = ((a + Math.PI/2) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
+      return norm < gapRad || norm > Math.PI*2-gapRad;
+    })();
+    if (inGap) continue;
+    const r1 = dishRadius, r2 = dishRadius + (d%90===0?14:8);
+    ctx.beginPath();
+    ctx.moveTo(x+Math.cos(a)*r1, y+Math.sin(a)*r1);
+    ctx.lineTo(x+Math.cos(a)*r2, y+Math.sin(a)*r2);
+    ctx.stroke();
+  }
+
+  // center crosshair
+  ctx.strokeStyle = 'rgba(191,227,255,0.3)';
+  ctx.beginPath();
+  ctx.moveTo(x-10,y); ctx.lineTo(x+10,y);
+  ctx.moveTo(x,y-10); ctx.lineTo(x,y+10);
+  ctx.stroke();
+
+  // scale/diameter callout
+  ctx.strokeStyle = 'rgba(191,227,255,0.4)';
+  ctx.beginPath();
+  ctx.moveTo(x+dishRadius*0.78, y+dishRadius*0.62);
+  ctx.lineTo(x+dishRadius+12, y+dishRadius*0.62);
+  ctx.stroke();
+  ctx.font = '9px JetBrains Mono';
+  ctx.fillStyle = 'rgba(216,236,255,0.6)';
+  ctx.textAlign = 'left';
+  ctx.fillText(`⌀ ${dishRadius*2}mm`, x+dishRadius-64, y+dishRadius*0.62-6);
+
+  // overflow / fill line — pieces resting above this line end the run
+  {
+    const dy = overflowY - y;
+    if (Math.abs(dy) <= dishRadius){
+      const halfChord = Math.sqrt(dishRadius*dishRadius - dy*dy);
+      ctx.strokeStyle = 'rgba(255,193,69,0.55)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6,4]);
+      ctx.beginPath();
+      ctx.moveTo(x-halfChord, overflowY);
+      ctx.lineTo(x+halfChord, overflowY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '9px JetBrains Mono';
+      ctx.fillStyle = 'rgba(255,193,69,0.75)';
+      ctx.textAlign = 'left';
+      ctx.fillText('FILL LINE — overflow above here', x+halfChord+6, overflowY+3);
+    }
+  }
+
+  // drop lane guide
+  if (!gameOver){
+    ctx.strokeStyle = 'rgba(255,193,69,0.35)';
+    ctx.setLineDash([4,5]);
+    ctx.beginPath();
+    ctx.moveTo(dropX, 20);
+    ctx.lineTo(dropX, dishCenter.y - dishRadius - 30);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+}
+
+function drawAtom(entry){
+  const { symbol, body, valenceUsed, deadEnd } = entry;
+  const el = ELEMENTS[symbol];
+  const r = radiusFor(symbol);
+  ctx.save();
+  ctx.translate(body.position.x, body.position.y);
+  ctx.beginPath();
+  ctx.arc(0,0,r,0,Math.PI*2);
+  // Dead-end clusters (fully saturated, no *enabled* molecule matches the
+  // formula — e.g. C+O+H forming CH2O while the formaldehyde flag is off)
+  // render grey instead of their element color, so it's visually obvious
+  // at a glance that this blob is stuck and won't ever resolve.
+  ctx.fillStyle = deadEnd ? '#5A5F63' : el.color;
+  ctx.globalAlpha = 0.92;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = deadEnd ? '#2E3134' : el.stroke;
+  ctx.stroke();
+  ctx.fillStyle = deadEnd ? '#C9CCCE' : '#0B3D66';
+  ctx.font = `700 ${Math.max(11,r*0.74)}px JetBrains Mono`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(symbol, 0, 1);
+  ctx.restore();
+
+  // Valence-slot dots, drawn unrotated in world space so they stay legible
+  // even as the atom's physics body spins. Filled dot = bond used, hollow
+  // = still open — makes "why didn't this bond" visible at a glance instead
+  // of only discoverable by nothing happening.
+  const valence = el.valence;
+  const dotR = Math.max(1.6, r*0.13);
+  const ringR = r + dotR + 2.5;
+  ctx.save();
+  ctx.translate(body.position.x, body.position.y);
+  for (let k=0; k<valence; k++){
+    const angle = (Math.PI*2/valence)*k - Math.PI/2;
+    const dx = Math.cos(angle)*ringR, dy = Math.sin(angle)*ringR;
+    ctx.beginPath();
+    ctx.arc(dx,dy,dotR,0,Math.PI*2);
+    if (k < valenceUsed){
+      ctx.fillStyle = deadEnd ? '#8A8F93' : '#FFC145';
+      ctx.fill();
+    } else {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(216,236,255,0.6)';
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawMolecule(entry){
+  const { moleculeId, body } = entry;
+  const mol = MOLECULES[moleculeId];
+  const r = radiusForMolecule(mol.tier);
+  ctx.save();
+  ctx.translate(body.position.x, body.position.y);
+  ctx.beginPath();
+  ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.fillStyle = mol.color;
+  ctx.globalAlpha = 0.95;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(11,61,102,0.6)';
+  ctx.stroke();
+  ctx.fillStyle = '#0B3D66';
+  ctx.font = `700 ${Math.max(10,r*0.34)}px JetBrains Mono`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(moleculeId, 0, 1);
+  ctx.restore();
+}
+
+function drawBonds(){
+  ctx.save();
+  ctx.strokeStyle = 'rgba(216,236,255,0.5)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3,3]);
+  const seen = new Set();
+  for (const [id, entry] of atomRegistry){
+    for (const nb of entry.bonds){
+      const key = id<nb?`${id}-${nb}`:`${nb}-${id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const other = atomRegistry.get(nb);
+      if (!other) continue;
+      ctx.beginPath();
+      ctx.moveTo(entry.body.position.x, entry.body.position.y);
+      ctx.lineTo(other.body.position.x, other.body.position.y);
+      ctx.stroke();
+    }
+  }
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawEffects(dt){
+  for (let i=effects.length-1;i>=0;i--){
+    const fx = effects[i];
+    if (fx.delay > 0){ fx.delay -= dt; continue; } // not yet due — held invisible
+    fx.life -= dt*0.9;
+    if (fx.life<=0){ effects.splice(i,1); continue; }
+    ctx.save();
+    ctx.globalAlpha = Math.max(0,fx.life);
+    if (fx.type==='text'){
+      ctx.fillStyle = fx.size==='huge' ? '#FFD873' : '#FFC145';
+      const px = fx.size==='huge' ? 28 : fx.size==='big' ? 21 : 14;
+      const rise = fx.size==='huge' ? 52 : fx.size==='big' ? 40 : 30;
+      ctx.font = `700 ${px}px JetBrains Mono`;
+      ctx.textAlign = 'center';
+      if (fx.size==='huge' || fx.size==='big'){
+        ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 6;
+      }
+      ctx.fillText(fx.text, fx.x, fx.y - (1-fx.life)*rise);
+    } else if (fx.type==='burst'){
+      ctx.strokeStyle = fx.color || '#FFC145';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(fx.x, fx.y, (1-fx.life)*46, 0, Math.PI*2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawPreview(){
+  if (gameOver) return;
+  const el = ELEMENTS[selectedElement];
+  const r = radiusFor(selectedElement);
+  const y = dishCenter.y - dishRadius - 40;
+  ctx.save();
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.arc(dropX, y, r, 0, Math.PI*2);
+  ctx.fillStyle = el.color;
+  ctx.fill();
+  ctx.strokeStyle = el.stroke;
+  ctx.stroke();
+  ctx.fillStyle = '#0B3D66';
+  ctx.font = `700 ${Math.max(11,r*0.74)}px JetBrains Mono`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(selectedElement, dropX, y+1);
+  ctx.restore();
+}
+
+let lastTime = performance.now();
+function renderLoop(now){
+  const dt = Math.min(0.05,(now-lastTime)/1000);
+  lastTime = now;
+  Engine.update(engine, dt*1000);
+
+  ctx.clearRect(0,0,W,H);
+  drawDish();
+  drawBonds();
+  for (const entry of atomRegistry.values()) drawAtom(entry);
+  for (const entry of moleculeRegistry.values()) drawMolecule(entry);
+  drawPreview();
+  drawEffects(dt);
+
+  requestAnimationFrame(renderLoop);
+}
+requestAnimationFrame(renderLoop);
+
+/* =========================================================
+   FIRST-TIME TUTORIAL (coach marks)
+   A short guided tour shown once per mode, the first time a new
+   player opens it. Dims the screen, highlights one thing at a time,
+   and shows a small callout. Nothing in the game itself is changed or
+   paused — the overlay simply sits on top and swallows touches, and the
+   dish is empty at that point so nothing is running underneath.
+
+   Storage key genso_tutorial_seen_<mode>:
+     'true'   -> already seen, never show again
+     'replay' -> player asked for it via Settings (index.html), show it
+     unset    -> first visit: show only if there's no saved best score
+                 (players who installed before this update already know
+                 the game, so they're marked as seen silently)
+   ========================================================= */
+(function gensoTutorial(){
+  try {
+  const MODE = 'lab';
+  const KEY = 'genso_tutorial_seen_' + MODE;
+  const stored = localStorage.getItem(KEY);
+  if (stored === 'true') return;
+  if (stored === null && bestScore > 0){ localStorage.setItem(KEY, 'true'); return; }
+
+  /* ---------- per-mode config ---------- */
+  const THEME = {
+    dim:'rgba(4,20,36,0.82)', accent:'#FFC145',
+    bubbleBg:'#0E3355', bubbleBorder:'#4A85B8', text:'#D8ECFF', dimText:'#7FAFD8',
+    font:"'JetBrains Mono', monospace", titleFont:"'JetBrains Mono', monospace",
+    radius:'6px', btnRadius:'4px', titleCase:'uppercase', letter:'1px',
+    btnBg:'transparent', btnColor:'#FFC145', btnBorder:'#FFC145',
+    shadow:'0 12px 40px rgba(0,0,0,.55)'
+  };
+  const LABELS = { skip:'SKIP TOUR', next:'NEXT', done:'GOT IT' };
+
+  // The whole dish plus the drop zone above it, in canvas coordinates.
+  function dishHole(){
+    return holeOfCanvas(
+      dishCenter.x - dishRadius - 14, dishCenter.y - dishRadius - 86,
+      dishCenter.x + dishRadius + 14, dishCenter.y + dishRadius + 14, 28);
+  }
+  function buildSteps(){
+    return [
+      { title:'Welcome to the lab',
+        text:"A quick tour before your first run. Nothing will drop until you're done, and it only takes a few seconds.",
+        btn:'SHOW ME' },
+      { title:'Your next atom',
+        text:"The highlighted atom is the one you'll drop. The NEXT badge shows what comes after it, so you can plan ahead.",
+        holes:() => [ holeOfEl(document.querySelector('.elem-btn.active'), 6, 10), holeOfEl(document.getElementById('nextBadge'), 6, 999) ] },
+      { title:'The dish',
+        text: (dragMode
+          ? "Touch and drag along the top of the dish to aim, then let go to drop. "
+          : "Tap along the top of the dish to drop the atom there. ")
+          + "Atoms that touch bond if they're a chemical match. Complete a molecule to score.",
+        holes:() => [ dishHole() ] },
+      { title:'Need a hand?',
+        text:'COMBOS lists every molecule and reaction you can make. RULES explains how bonding works.',
+        foot:'You can replay this tour anytime from Settings on the start screen.',
+        holes:() => [ holeOfEl(document.getElementById('combosBtn'), 6, 6), holeOfEl(document.getElementById('rulesBtn'), 6, 6) ] }
+    ];
+  }
+
+  /* ---------- helpers ---------- */
+  const NS = 'http://www.w3.org/2000/svg';
+  const dragMode = (typeof controlMode !== 'undefined') && controlMode === 'drag';
+
+  // Turn a DOM element into a highlight rectangle (viewport coordinates).
+  function holeOfEl(el, pad, radius){
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    pad = pad == null ? 6 : pad;
+    return { x:r.left - pad, y:r.top - pad, w:r.width + pad*2, h:r.height + pad*2, r: radius == null ? 14 : radius };
+  }
+  // Turn a rectangle in canvas-internal coordinates into viewport coordinates.
+  function holeOfCanvas(left, top, right, bottom, radius){
+    const c = canvas.getBoundingClientRect();
+    const sx = c.width / W, sy = c.height / H;
+    return { x:c.left + left*sx, y:c.top + top*sy, w:(right-left)*sx, h:(bottom-top)*sy, r: radius == null ? 24 : radius };
+  }
+
+  /* ---------- styles ---------- */
+  const style = document.createElement('style');
+  style.textContent = `
+  #tutOverlay{
+    position:fixed; inset:0; z-index:1000;
+    opacity:0; transition:opacity .25s ease;
+    touch-action:none; -webkit-user-select:none; user-select:none;
+    font-family:${THEME.font};
+  }
+  #tutOverlay.show{ opacity:1; }
+  #tutSvg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #tutSvg .tut-dim{ fill:${THEME.dim}; }
+  #tutSvg .tut-ring{
+    fill:none; stroke:${THEME.accent}; stroke-width:2.5;
+    animation:tutPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes tutPulse{ 0%,100%{ stroke-opacity:1; } 50%{ stroke-opacity:.35; } }
+  #tutBubble{
+    position:absolute; box-sizing:border-box;
+    background:${THEME.bubbleBg}; color:${THEME.text};
+    border:1px solid ${THEME.bubbleBorder};
+    border-radius:${THEME.radius};
+    box-shadow:${THEME.shadow};
+    padding:16px 18px 14px;
+    animation:tutIn .28s ease both;
+  }
+  @keyframes tutIn{ from{ opacity:0; transform:translateY(6px) scale(.97); } to{ opacity:1; transform:none; } }
+  #tutBubble .tut-step{ font-size:11px; letter-spacing:1px; color:${THEME.dimText}; margin-bottom:6px; }
+  #tutBubble .tut-title{
+    font-family:${THEME.titleFont}; font-weight:700; font-size:17px;
+    color:${THEME.accent}; margin-bottom:6px;
+    text-transform:${THEME.titleCase}; letter-spacing:${THEME.letter};
+  }
+  #tutBubble .tut-text{ font-size:14px; line-height:1.5; }
+  #tutBubble .tut-foot{ font-size:12px; line-height:1.45; color:${THEME.dimText}; margin-top:10px; }
+  #tutBubble .tut-actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:14px; }
+  #tutBubble button{
+    font-family:${THEME.font}; font-size:13px; font-weight:700; cursor:pointer;
+    border-radius:${THEME.btnRadius}; padding:9px 16px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #tutBubble .tut-skip{ background:transparent; border:none; color:${THEME.dimText}; padding:9px 4px; }
+  #tutBubble .tut-next{ background:${THEME.btnBg}; color:${THEME.btnColor}; border:1px solid ${THEME.btnBorder}; }
+  #tutBubble .tut-next:active{ transform:scale(.96); }
+  `;
+  document.head.appendChild(style);
+
+  /* ---------- overlay ---------- */
+  let overlay, holesG, ringsG, bubble, idx = 0, raf = 0;
+  const steps = buildSteps();
+
+  function build(){
+    overlay = document.createElement('div');
+    overlay.id = 'tutOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.innerHTML =
+      '<svg id="tutSvg" aria-hidden="true">' +
+        '<defs><mask id="tutMask"><rect width="100%" height="100%" fill="#fff"/><g id="tutHoles"></g></mask></defs>' +
+        '<rect class="tut-dim" width="100%" height="100%" mask="url(#tutMask)"/>' +
+        '<g id="tutRings"></g>' +
+      '</svg>' +
+      '<div id="tutBubble">' +
+        '<div class="tut-step"></div>' +
+        '<div class="tut-title"></div>' +
+        '<div class="tut-text"></div>' +
+        '<div class="tut-foot"></div>' +
+        '<div class="tut-actions">' +
+          '<button type="button" class="tut-skip">' + LABELS.skip + '</button>' +
+          '<button type="button" class="tut-next"></button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    holesG = overlay.querySelector('#tutHoles');
+    ringsG = overlay.querySelector('#tutRings');
+    bubble = overlay.querySelector('#tutBubble');
+    overlay.querySelector('.tut-next').addEventListener('click', next);
+    overlay.querySelector('.tut-skip').addEventListener('click', finish);
+    // keep touches/scrolls from reaching the game underneath
+    overlay.addEventListener('touchmove', (e) => e.preventDefault(), { passive:false });
+  }
+
+  function clampHole(h){
+    const vw = window.innerWidth, vh = window.innerHeight, m = 4;
+    const x1 = Math.max(m, h.x), y1 = Math.max(m, h.y);
+    const x2 = Math.min(vw - m, h.x + h.w), y2 = Math.min(vh - m, h.y + h.h);
+    return { x:x1, y:y1, w:Math.max(0, x2 - x1), h:Math.max(0, y2 - y1), r:h.r };
+  }
+
+  function render(){
+    const s = steps[idx];
+    const holes = (s.holes ? s.holes() : []).filter(Boolean).map(clampHole).filter(h => h.w > 0 && h.h > 0);
+
+    holesG.textContent = '';
+    ringsG.textContent = '';
+    for (const h of holes){
+      const rx = Math.min(h.r, h.w/2, h.h/2);
+      const make = (parent) => {
+        const r = document.createElementNS(NS, 'rect');
+        r.setAttribute('x', h.x); r.setAttribute('y', h.y);
+        r.setAttribute('width', h.w); r.setAttribute('height', h.h);
+        r.setAttribute('rx', rx); r.setAttribute('ry', rx);
+        parent.appendChild(r);
+        return r;
+      };
+      make(holesG).setAttribute('fill', '#000');
+      make(ringsG).setAttribute('class', 'tut-ring');
+    }
+
+    const last = idx === steps.length - 1;
+    bubble.querySelector('.tut-step').textContent = (idx + 1) + ' / ' + steps.length;
+    bubble.querySelector('.tut-title').textContent = s.title;
+    bubble.querySelector('.tut-text').textContent = s.text;
+    const foot = bubble.querySelector('.tut-foot');
+    foot.textContent = s.foot || '';
+    foot.style.display = s.foot ? 'block' : 'none';
+    bubble.querySelector('.tut-next').textContent = s.btn || (last ? LABELS.done : LABELS.next);
+    bubble.querySelector('.tut-skip').style.visibility = last ? 'hidden' : 'visible';
+
+    // restart the little entrance animation on every step
+    bubble.style.animation = 'none'; void bubble.offsetWidth; bubble.style.animation = '';
+    placeBubble(holes);
+  }
+
+  function placeBubble(holes){
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const bw = Math.min(330, vw - 24);
+    bubble.style.width = bw + 'px';
+    const bh = bubble.offsetHeight;
+    const gap = 16;
+    let left, top;
+    if (!holes.length){
+      left = (vw - bw) / 2;
+      top = (vh - bh) / 2;
+    } else {
+      const x1 = Math.min(...holes.map(h => h.x)), y1 = Math.min(...holes.map(h => h.y));
+      const x2 = Math.max(...holes.map(h => h.x + h.w)), y2 = Math.max(...holes.map(h => h.y + h.h));
+      const above = y1, below = vh - y2;
+      left = (x1 + x2) / 2 - bw / 2;
+      if (below >= bh + gap + 8 && below >= above) top = y2 + gap;
+      else if (above >= bh + gap + 8) top = y1 - bh - gap;
+      else if (below >= bh + gap + 8) top = y2 + gap;
+      else top = y1 + (y2 - y1) * 0.6 - bh / 2; // no room around it: sit inside the highlight, below its top edge
+    }
+    left = Math.max(12, Math.min(left, vw - bw - 12));
+    top = Math.max(12, Math.min(top, vh - bh - 12));
+    bubble.style.left = left + 'px';
+    bubble.style.top = top + 'px';
+  }
+
+  function next(){
+    if (idx >= steps.length - 1){ finish(); return; }
+    idx++;
+    render();
+  }
+
+  function finish(){
+    localStorage.setItem(KEY, 'true');
+    window.removeEventListener('resize', onResize);
+    window.removeEventListener('orientationchange', onResize);
+    overlay.classList.remove('show');
+    setTimeout(() => { overlay.remove(); style.remove(); }, 280);
+  }
+
+  function onResize(){
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => { if (overlay && overlay.isConnected) render(); });
+  }
+
+  function start(attempt){
+    // wait until the layout has real dimensions before measuring anything
+    const c = canvas.getBoundingClientRect();
+    if ((c.width < 50 || c.height < 50) && attempt < 12){ setTimeout(() => start(attempt + 1), 150); return; }
+    build();
+    render();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+  }
+  setTimeout(() => start(0), 600);
+
+  } catch (err) {
+    // The tutorial is a nicety — if anything in it fails, the game must carry on untouched.
+    console.warn('Tutorial skipped:', err);
+  }
+})();
+</script>
+<script src="assets/js/app-lifecycle.js"></script>
+<script src="assets/js/web-shell.js"></script>
+</body>
+</html>
