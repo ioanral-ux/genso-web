@@ -4,13 +4,21 @@
 <title>Genso Game</title>
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>
-html,body{margin:0;height:100%;background:radial-gradient(circle at 50% 30%,#1b5a8f,#0B3D66 60%,#06233d);overflow:hidden}
+html,body{margin:0;height:100%;background:#06233d;overflow:hidden}
 body{display:flex;align-items:center;justify-content:center}
-iframe{border:0;height:100vh;width:min(560px,56vh);max-width:100vw;background:#0B3D66;box-shadow:0 0 60px rgba(0,0,0,.5)}
-</style></head><body>
+.bg{position:fixed;inset:-60px;background-size:cover;background-position:center;opacity:0;transition:opacity .5s;z-index:0}
+.bg.menu{background:radial-gradient(circle at 50% 30%,#1b5a8f,#0B3D66 60%,#06233d);inset:0}
+.bg.lab{background-image:linear-gradient(rgba(6,25,45,.35),rgba(6,25,45,.35)),url(assets/images/lab_bg.jpg);filter:blur(14px)}
+.bg.kawaii{background-image:linear-gradient(rgba(255,255,255,.08),rgba(255,255,255,.08)),url(assets/images/kawaii_background.png);filter:blur(14px)}
+body.menu .bg.menu,body.lab .bg.lab,body.kawaii .bg.kawaii{opacity:1}
+iframe{position:relative;z-index:1;border:0;height:100vh;width:min(560px,56vh);max-width:100vw;background:#0B3D66;box-shadow:0 0 60px rgba(0,0,0,.45)}
+</style></head><body class="menu">
+<div class="bg menu"></div><div class="bg lab"></div><div class="bg kawaii"></div>
 <script>
 var p=new URLSearchParams(location.search).get('p')||'index.html';
 if(!/^[\w-]+\.html$/.test(p))p='index.html';
-var f=document.createElement('iframe');f.src=p;f.setAttribute('allow','autoplay; fullscreen');document.body.appendChild(f);
-document.title='Genso Game';
+var f=document.createElement('iframe');f.src=p;f.setAttribute('allow','autoplay; fullscreen');
+function sync(){try{var n=f.contentWindow.location.pathname;document.body.className=/kawaii/.test(n)?'kawaii':/genso-game/.test(n)?'lab':'menu';}catch(e){}}
+f.addEventListener('load',sync);
+document.body.appendChild(f);
 </script></body></html>

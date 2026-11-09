@@ -52,6 +52,13 @@
   c3.textContent = 'html,body{overscroll-behavior:none}#stage{overflow:hidden!important}';
   if (document.querySelector('script[src*="web-shell"]') && /genso-game/.test(location.pathname)) document.head.appendChild(c3);
 
+  // 5b. Menu page: no scrollbar flash when a card expands; keep footnote clear of the bottom bar
+  if (/(^|\/)(index\.html)?$/.test(location.pathname)) {
+    var c4 = document.createElement('style');
+    c4.textContent = '#stage{scrollbar-width:none;padding-bottom:64px!important}#stage::-webkit-scrollbar{display:none}';
+    document.head.appendChild(c4);
+  }
+
   // 6. "Get the app" bar on the menu page (hidden once installed to the home screen)
   try {
     var standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
